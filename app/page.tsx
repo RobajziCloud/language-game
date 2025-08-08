@@ -58,7 +58,6 @@ export default function Page() {
   const [verdict, setVerdict] = useState<Verdict[]>([]);
   const [showExplain, setShowExplain] = useState(false);
   const [isRoundLoading, setIsRoundLoading] = useState(false);
-  const [pendingNext, setPendingNext] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setLoadingStep((s) => (s + 1) % 4), 700);
@@ -73,10 +72,10 @@ export default function Page() {
     applyLevel(level);
   }, [level, applyLevel]);
 
-  // initialize first sentence when buffer fills
+  // initial sentence when buffer fills
   useEffect(() => {
     const init = async () => {
-      if (!pack && buffer.length > 0) {
+      if (!pack && buffer.length >= 0) {
         const s = await getNextSentence();
         if (s) {
           const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
@@ -146,65 +145,33 @@ export default function Page() {
   const canVerify = useMemo(() => slots.length > 0 && slots.every((s) => s.token !== null), [slots]);
 
   const onNextRound = async () => {
-    if (isRoundLoading || pendingNext) return;
+    if (isRoundLoading) return;
     setShowExplain(false);
-
-    // Optimisticky resetni UI, ať není vidět "ověřený" stav
+    setIsRoundLoading(true);
     setVerdict((v) => v.map(() => null));
     setPool([]);
-    // ponecháme stejný počet slotů, ale vyčistíme je
     setSlots((prev) => prev.map((sl) => ({ ...sl, token: null })));
 
-    setIsRoundLoading(true);
-    setPendingNext(true);
-
-    // Zkus okamžitě vytáhnout další větu (pár krátkých pokusů)
-    let s: Sentence | null = null;
-    for (let i = 0; i < 6; i++) {
-      s = await getNextSentence();
-      if (s) break;
+    let s: Sentence | null = await getNextSentence();
+    if (!s) {
+      // krátké čekání na buffer
       await new Promise((r) => setTimeout(r, 250));
+      s = await getNextSentence();
     }
+    setIsRoundLoading(false);
+    if (!s) return;
 
-    if (s) {
-      const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
-      setPack(p);
-      setSlots(p.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
-      setRound((r) => r + 1);
-      setTimeout(() => {
-        setPool(shuffle(p.english));
-        setVerdict(Array(p.english.length).fill(null));
-      }, 250);
-      setIsRoundLoading(false);
-      setPendingNext(false);
-    }
-    // Pokud s = null, necháme pendingNext=true a isRoundLoading=true
-    // a počkáme na efekt níže, který reaguje na doplnění bufferu.
+    const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
+    setPack(p);
+    setSlots(p.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
+    setPool([]);
+    setRound((r) => r + 1);
+    setTimeout(() => setPool(shuffle(p.english)), 250);
+    setVerdict(Array(p.english.length).fill(null));
   };
 
-  // Když čekáme na další větu (pendingNext=true) a dorazí nové věty v bufferu,
-  // pokusíme se ji hned vytáhnout a připravit kolo.
-  useEffect(() => {
-    if (!pendingNext) return;
-    let cancelled = false;
-    (async () => {
-      const s = await getNextSentence();
-      if (cancelled || !s) return;
-      const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
-      setPack(p);
-      setSlots(p.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
-      setRound((r) => r + 1);
-      setTimeout(() => {
-        setPool(shuffle(p.english));
-        setVerdict(Array(p.english.length).fill(null));
-      }, 250);
-      setIsRoundLoading(false);
-      setPendingNext(false);
-    })();
-    return () => { cancelled = true; };
-  }, [buffer, pendingNext, getNextSentence, round]);
-
-  if (loading || !pack) {
+  // *** Loader jen podle `loading` ***
+  if (loading) {
     const lines = [
       "Načítám slovník…",
       "Připravuji hru…",
@@ -228,7 +195,7 @@ export default function Page() {
               </div>
               <div className="font-semibold tracking-wide text-lg">Lang Trainer</div>
             </div>
-            <div className="text-sm opacity-80 mb-2">{lines[loadingStep]}</div>
+            <div className="text-sm opacity-80 mb-2">{lines[Math.min(3, loadingStep)]}</div>
             <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
               <motion.div
                 className="h-full bg-emerald-400/80"
@@ -299,57 +266,66 @@ export default function Page() {
                 <CardTitle className="text-zinc-100 text-lg">Build the sentence</CardTitle>
               </CardHeader>
               <CardContent>
-                <div
-                  className="flex flex-wrap gap-3 p-4 rounded-2xl bg-white/5 ring-1 ring-white/10 min-h-[88px]"
-                  onDragOver={(e) => e.preventDefault()}
-                >
-                  {slots.map((slot, idx) => (
-                    <DropSlot
-                      key={slot.id}
-                      word={slot.token}
-                      verdict={verdict[idx]}
-                      onDrop={onDropToSlot(idx)}
-                      onDragStartWord={onDragStart}
-                    />
-                  ))}
-                </div>
-
-                <div className="mt-6">
-                  <div className="text-xs uppercase tracking-wider text-zinc-400 mb-2">Dostupná slova</div>
-                  <div
-                    className="flex flex-wrap gap-3 p-4 rounded-2xl bg-gradient-to-br from-white/5 to-white/0 ring-1 ring-white/10 min-h-[72px]"
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={onDropToPool}
-                  >
-                    <AnimatePresence>
-                      {pool.map((w) => (
-                        <Word key={w} word={w} draggable onDragStart={onDragStart(w)} />
+                {!pack ? (
+                  <div className="flex items-center gap-2 text-sm text-zinc-400 p-4">
+                    <Loader2 className="animate-spin" />
+                    Připravuji větu…
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className="flex flex-wrap gap-3 p-4 rounded-2xl bg-white/5 ring-1 ring-white/10 min-h-[88px]"
+                      onDragOver={(e) => e.preventDefault()}
+                    >
+                      {slots.map((slot, idx) => (
+                        <DropSlot
+                          key={slot.id}
+                          word={slot.token}
+                          verdict={verdict[idx]}
+                          onDrop={onDropToSlot(idx)}
+                          onDragStartWord={onDragStart}
+                        />
                       ))}
-                    </AnimatePresence>
-                    {pool.length === 0 && (
-                      <div className="text-xs text-zinc-500">
-                        {isRoundLoading || pendingNext
-                          ? "Připravuji další větu…"
-                          : "Všechna slova jsou umístěná. Přesuň je zpět sem, pokud chceš změnit pořadí."}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                    </div>
 
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="text-xs text-zinc-400">
-                    Tip: Slova můžeš libovolně přeskupovat přetažením mezi sloty a zásobníkem.
-                  </div>
-                  {!showExplain ? (
-                    <Button disabled={!canVerify} onClick={onVerify} className="gap-2">
-                      Ověřit větu <ArrowRight size={16} />
-                    </Button>
-                  ) : (
-                    <Button onClick={onNextRound} className="gap-2" disabled={isRoundLoading || pendingNext}>
-                      {isRoundLoading || pendingNext ? "Načítám…" : "Další kolo"} <ArrowRight size={16} />
-                    </Button>
-                  )}
-                </div>
+                    <div className="mt-6">
+                      <div className="text-xs uppercase tracking-wider text-zinc-400 mb-2">Dostupná slova</div>
+                      <div
+                        className="flex flex-wrap gap-3 p-4 rounded-2xl bg-gradient-to-br from-white/5 to-white/0 ring-1 ring-white/10 min-h-[72px]"
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={onDropToPool}
+                      >
+                        <AnimatePresence>
+                          {pool.map((w) => (
+                            <Word key={w} word={w} draggable onDragStart={onDragStart(w)} />
+                          ))}
+                        </AnimatePresence>
+                        {pool.length === 0 && (
+                          <div className="text-xs text-zinc-500">
+                            {isRoundLoading
+                              ? "Připravuji další větu…"
+                              : "Všechna slova jsou umístěná. Přesuň je zpět sem, pokud chceš změnit pořadí."}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex items-center justify-between">
+                      <div className="text-xs text-zinc-400">
+                        Tip: Slova můžeš libovolně přeskupovat přetažením mezi sloty a zásobníkem.
+                      </div>
+                      {!showExplain ? (
+                        <Button disabled={!canVerify} onClick={onVerify} className="gap-2">
+                          Ověřit větu <ArrowRight size={16} />
+                        </Button>
+                      ) : (
+                        <Button onClick={onNextRound} className="gap-2" disabled={isRoundLoading}>
+                          {isRoundLoading ? "Načítám…" : "Další kolo"} <ArrowRight size={16} />
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -364,8 +340,8 @@ export default function Page() {
                   <p className="text-sm text-zinc-400 mb-3">Najetím myši zobrazíš slovní druh, kliknutím význam ze slovníku.</p>
                   <div className="flex flex-wrap gap-2">
                     {pack.tokens.map((t) => (
-                      <WordInfo key={t.w} token={t} />)
-                    )}
+                      <WordInfo key={t.w} token={t} />
+                    ))}
                   </div>
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
