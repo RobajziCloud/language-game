@@ -1,5 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 
+
+
 const SENTENCES = [
   { fr: ["Je", "suis", "étudiant"], en: "I am a student.", pos:["pronoun","verb","noun"] },
   { fr: ["Elle", "mange", "une", "pomme"], en: "She is eating an apple.", pos:["pronoun","verb","article","noun"] },
