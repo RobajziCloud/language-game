@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lang Trainer — Sentence Builder</title>
+    <meta name="description" content="Build correct English sentences by arranging word blocks." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="dot"></div>
+          <span class="brand-name">Lang Trainer</span>
+        </div>
+        <nav class="nav">
+          <button class="nav-btn active" id="nav-game" aria-label="Game">🧩 Game</button>
+          <button class="nav-btn" id="nav-stats" aria-label="Stats">📈 Stats</button>
+          <button class="nav-btn" id="nav-help" aria-label="Help">❓ Help</button>
+        </nav>
+        <div class="footer-note">v1.0 • static build</div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="progress-wrap">
+            <div class="progress-label"><span id="progress-text">0/0 complete</span></div>
+            <div class="progress">
+              <div id="progress-bar" class="progress-bar"></div>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="btn-shuffle" class="ghost">Shuffle</button>
+            <button id="btn-reset" class="ghost">Reset</button>
+            <button id="btn-check" class="primary">Verify sentence</button>
+          </div>
+        </header>
+
+        <section id="view-game" class="view active">
+          <div class="board">
+            <div class="pool-header">
+              <h2>Arrange the words</h2>
+              <p>Drag the blocks into the canvas below to form a correct sentence.</p>
+            </div>
+
+            <div id="word-pool" class="word-pool" aria-label="Word pool"></div>
+
+            <div class="canvas-header">
+              <div class="chip subtle">Drop words here — the canvas expands to fit</div>
+            </div>
+
+            <div id="canvas" class="canvas" aria-label="Sentence canvas"></div>
+
+            <div id="result" class="result hidden">
+              <div class="result-row">
+                <span class="chip success" id="score-chip">0 / 0 correct</span>
+                <button id="btn-next" class="primary small">Next round</button>
+              </div>
+              <div class="correct-wrap">
+                <div class="correct-title">Correct sentence</div>
+                <div id="correct-sentence" class="correct-sentence"></div>
+                <div id="explanation" class="explanation"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-stats" class="view">
+          <div class="panel">
+            <h2>Your progress</h2>
+            <div class="stats-grid">
+              <div class="stat-card"><div class="stat-value" id="st-rounds">0</div><div class="stat-label">Rounds played</div></div>
+              <div class="stat-card"><div class="stat-value" id="st-perfect">0</div><div class="stat-label">Perfect sentences</div></div>
+              <div class="stat-card"><div class="stat-value" id="st-accuracy">0%</div><div class="stat-label">Average accuracy</div></div>
+              <div class="stat-card"><div class="stat-value" id="st-learned">0</div><div class="stat-label">Words learned</div></div>
+            </div>
+            <button id="btn-clear-stats" class="ghost danger">Clear stats</button>
+          </div>
+        </section>
+
+        <section id="view-help" class="view">
+          <div class="panel">
+            <h2>How it works</h2>
+            <ol>
+              <li>Drag words from the pool into the canvas.</li>
+              <li>Reorder them anytime by dragging blocks.</li>
+              <li>Press <strong>Verify sentence</strong> to check your answer.</li>
+              <li>Hover the words in the correct sentence to see their part of speech.</li>
+              <li>Press <strong>Next round</strong> to continue.</li>
+            </ol>
+            <p>Tip: The canvas gives a hint of structure but doesn't reveal exact slots.</p>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <script src="./data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
