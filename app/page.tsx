@@ -73,7 +73,7 @@ export default function Page() {
   // initialize first sentence when buffer fills
   useEffect(() => {
     if (!pack && buffer.length > 0) {
-      const s = getNextSentence();
+      const s = await getNextSentence();
       if (s) {
         const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
         setPack(p);
@@ -136,9 +136,12 @@ export default function Page() {
 
   const onNextRound = () => {
     setShowExplain(false);
-    setActiveToken(null);
-    const s = getNextSentence();
-    if (!s) return; // buffer doplní prefetch
+    let s = await getNextSentence();      // <-- await
+    if (!s) {                             // když je buffer prázdný a hook teď dotahuje
+      await new Promise(r => setTimeout(r, 350));
+      s = await getNextSentence();
+           }
+    if (!s) return;
     const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
     setPack(p);
     setSlots(p.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
