@@ -16,7 +16,15 @@ export default function Page(){
         <select value={level} onChange={(e)=>setLevel(e.target.value as any)} className="bg-white/10 rounded-lg px-3 py-2 ring-1 ring-white/15">
           {LEVELS.map(l=><option key={l}>{l}</option>)}
         </select>
-        <button onClick={()=>setCurrent(getNextSentence())} className="bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-xl">Načti větu</button>
+        <button
+  onClick={async () => {
+    const s = await getNextSentence();
+    setCurrent(s);
+  }}
+  className="bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-xl"
+>
+  Načti větu
+</button>
         <span className="text-xs">Buffer: {buffer.length}</span>
         {prefetching && <span className="text-xs text-amber-300">Prefetch…</span>}
       </div>
