@@ -1,0 +1,54 @@
+[
+  {
+    "id": "A2-1",
+    "level": "A2",
+    "topic": "daily",
+    "english": [
+      "I",
+      "am",
+      "going",
+      "to",
+      "the",
+      "store",
+      "now"
+    ],
+    "tokens": [
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "am",
+        "pos": "verb",
+        "meaning": "be (1st sg)"
+      },
+      {
+        "w": "going",
+        "pos": "verb",
+        "meaning": "moving towards"
+      },
+      {
+        "w": "to",
+        "pos": "preposition",
+        "meaning": "direction"
+      },
+      {
+        "w": "the",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "store",
+        "pos": "noun",
+        "meaning": "shop"
+      },
+      {
+        "w": "now",
+        "pos": "adverb",
+        "meaning": "at the present time"
+      }
+    ],
+    "explanation": "Present continuous for arrangements happening now."
+  }
+]

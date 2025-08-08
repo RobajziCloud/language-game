@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --background: #0b0b13; --foreground: #e5e7eb; }
+html, body { height: 100%; }
+body { color: var(--foreground); background: var(--background); }

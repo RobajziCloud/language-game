@@ -1,0 +1,60 @@
+[
+  {
+    "id": "B1-1",
+    "level": "B1",
+    "topic": "work",
+    "english": [
+      "I",
+      "have",
+      "been",
+      "working",
+      "here",
+      "for",
+      "three",
+      "years"
+    ],
+    "tokens": [
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "have",
+        "pos": "auxiliary",
+        "meaning": "present perfect"
+      },
+      {
+        "w": "been",
+        "pos": "past participle",
+        "meaning": "be (pp)"
+      },
+      {
+        "w": "working",
+        "pos": "verb",
+        "meaning": "doing a job"
+      },
+      {
+        "w": "here",
+        "pos": "adverb",
+        "meaning": "in this place"
+      },
+      {
+        "w": "for",
+        "pos": "preposition",
+        "meaning": "duration"
+      },
+      {
+        "w": "three",
+        "pos": "numeral",
+        "meaning": "3"
+      },
+      {
+        "w": "years",
+        "pos": "noun",
+        "meaning": "periods of twelve months"
+      }
+    ],
+    "explanation": "Present perfect continuous: action started in past and continues now."
+  }
+]

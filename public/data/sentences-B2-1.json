@@ -1,0 +1,102 @@
+[
+  {
+    "id": "B2-1",
+    "level": "B2",
+    "topic": "opinions",
+    "english": [
+      "It",
+      "was",
+      "not",
+      "until",
+      "I",
+      "moved",
+      "abroad",
+      "that",
+      "I",
+      "realized",
+      "how",
+      "expensive",
+      "rent",
+      "can",
+      "be"
+    ],
+    "tokens": [
+      {
+        "w": "It",
+        "pos": "pronoun",
+        "meaning": "dummy subject"
+      },
+      {
+        "w": "was",
+        "pos": "verb",
+        "meaning": "be (past)"
+      },
+      {
+        "w": "not",
+        "pos": "adverb",
+        "meaning": "negation"
+      },
+      {
+        "w": "until",
+        "pos": "preposition",
+        "meaning": "up to the time"
+      },
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "moved",
+        "pos": "verb",
+        "meaning": "relocated"
+      },
+      {
+        "w": "abroad",
+        "pos": "adverb",
+        "meaning": "in another country"
+      },
+      {
+        "w": "that",
+        "pos": "conjunction",
+        "meaning": "introducer"
+      },
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "realized",
+        "pos": "verb",
+        "meaning": "understood"
+      },
+      {
+        "w": "how",
+        "pos": "adverb",
+        "meaning": "to what degree"
+      },
+      {
+        "w": "expensive",
+        "pos": "adjective",
+        "meaning": "costly"
+      },
+      {
+        "w": "rent",
+        "pos": "noun",
+        "meaning": "payment for housing"
+      },
+      {
+        "w": "can",
+        "pos": "modal",
+        "meaning": "ability/possibility"
+      },
+      {
+        "w": "be",
+        "pos": "verb",
+        "meaning": "exist"
+      }
+    ],
+    "explanation": "'It was not until...' emphasizes the time something happened."
+  }
+]
