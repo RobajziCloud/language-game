@@ -1,4 +1,3 @@
-
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -20,17 +19,24 @@ export type Level = (typeof LEVELS)[number];
  */
 async function loadBatchFromPublic(level: Level, page: number): Promise<{ items: Sentence[]; eof: boolean }> {
   const url = `/data/sentences-${level}-${page}.json`;
+  console.log("Loading sentences from:", url);
   try {
-    const res = await fetch(url, { cache: "no-store" }); // pro jistotu ignoruj cache během vývoje
+    const res = await fetch(url, { cache: "no-store" });
+    console.log("Fetch status:", res.status);
     if (!res.ok) {
-      // 404 => další stránka neexistuje
+      // fallback na první stránku dané úrovně
+      if (res.status === 404 && page !== 1) {
+        console.warn("Falling back to page 1 for", level);
+        return loadBatchFromPublic(level, 1);
+      }
       return { items: [], eof: res.status === 404 };
     }
     const data = await res.json();
     const items: Sentence[] = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+    console.log("Loaded items count:", items.length);
     return { items, eof: false };
   } catch (e) {
-    console.warn("loadBatchFromPublic failed:", url, e);
+    console.error("loadBatchFromPublic failed:", url, e);
     return { items: [], eof: false };
   }
 }
@@ -39,6 +45,10 @@ export function useSentenceSource(initialLevel: Level) {
   const [level, setLevel] = useState<Level>(initialLevel);
   const [buffer, setBuffer] = useState<Sentence[]>([]);
   const [prefetching, setPrefetching] = useState(false);
+
+  // Živá reference na buffer, aby se v callbackech nečetl zastaralý stav
+  const bufferRef = useRef<Sentence[]>(buffer);
+  useEffect(() => { bufferRef.current = buffer; }, [buffer]);
 
   // Udržujeme číslo stránky pro daný level; začínáme na 1
   const pageRef = useRef<number>(1);
@@ -74,6 +84,7 @@ export function useSentenceSource(initialLevel: Level) {
       if (items.length) {
         // posuň stránku až po úspěšném načtení
         pageRef.current += 1;
+        // přidej do bufferu, ale vrať i volajícímu
         setBuffer((prev) => [...prev, ...items]);
       }
       return items;
@@ -91,10 +102,11 @@ export function useSentenceSource(initialLevel: Level) {
     }
   }, [buffer.length, prefetching, prefetch]);
 
-  // Vrací další větu. Když buffer dojde, pokusí se rychle přednačíst.
+  // Vrací další větu. Nep spoléhá se na propsání state – pokud je buffer prázdný,
+  // vezme první větu přímo z návratové hodnoty prefetch() a zbytek dá do bufferu.
   const getNextSentence = useCallback(async (): Promise<Sentence | null> => {
-    // 1) Máme něco v bufferu? Vrať hned.
-    if (buffer.length > 0) {
+    // 1) Máme něco hned teď?
+    if (bufferRef.current.length > 0) {
       let next: Sentence | null = null;
       setBuffer((prev) => {
         if (prev.length === 0) return prev;
@@ -102,34 +114,21 @@ export function useSentenceSource(initialLevel: Level) {
         return prev.slice(1);
       });
       // paralelně dobij další dávku (nezdržuje UI)
-      prefetch();
+      if (!prefetching && !inflightRef.current) prefetch();
       return next;
     }
 
-    // 2) Buffer je prázdný – zkus rychlé přednačtení s krátkým timeoutem
-    const deadline = Date.now() + 1200; // ~1.2 s tolerance
-    if (!prefetching && !inflightRef.current) {
-      await prefetch();
-    }
-    while (Date.now() < deadline) {
-      if (buffer.length > 0) break;
-      await new Promise((r) => setTimeout(r, 100));
-    }
-
-    if (buffer.length > 0) {
-      let next: Sentence | null = null;
-      setBuffer((prev) => {
-        if (prev.length === 0) return prev;
-        next = prev[0];
-        return prev.slice(1);
-      });
-      prefetch();
-      return next;
+    // 2) Nemáme → dotáhni batch a vrať PRVNÍ z něj hned, bez čekání na setState
+    const batch = await prefetch();
+    if (batch.length > 0) {
+      const [first, ...rest] = batch;
+      if (rest.length) setBuffer((prev) => [...prev, ...rest]);
+      return first;
     }
 
     // Nic k dispozici – vrať null, UI má vlastní fallback
     return null;
-  }, [buffer, prefetch, prefetching]);
+  }, [prefetch, prefetching]);
 
   return useMemo(
     () => ({ buffer, prefetching, setLevel, getNextSentence }),
