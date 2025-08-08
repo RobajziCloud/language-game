@@ -62,3 +62,72 @@ export function useSentenceSource(initialLevel: Level) {
         setState((s) => ({ ...s, buffer: data }));
       })
       .catch((err) => {
+        console.error(err);
+      })
+      .finally(() => {
+        inflightRef.current = false;
+        if (!cancelled) {
+          setState((s) => ({ ...s, prefetching: false }));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialLevel]);
+
+  // 2) Debounce zviditelnění indikátoru „Načítám…“
+  useEffect(() => {
+    if (state.prefetching) {
+      const t = setTimeout(() => setPrefetchVisible(true), 300);
+      return () => clearTimeout(t);
+    }
+    setPrefetchVisible(false);
+  }, [state.prefetching]);
+
+  // 3) Prefetch, když opravdu dochází buffer a nic neběží
+  useEffect(() => {
+    if (state.prefetching || inflightRef.current) return;
+    if (state.buffer.length <= 1) {
+      setState((s) => ({ ...s, prefetching: true }));
+      inflightRef.current = true;
+
+      const pageToGet = nextPageRef.current;
+      fetchShard(state.level, pageToGet)
+        .then((data) =>
+          setState((s) => ({
+            ...s,
+            buffer: [...s.buffer, ...data],
+            page: pageToGet,
+          }))
+        )
+        .catch(() => {
+          // tichý fallback – když další page zatím není, nic se neděje
+        })
+        .finally(() => {
+          inflightRef.current = false;
+          setState((s) => ({ ...s, prefetching: false }));
+        });
+
+      nextPageRef.current = pageToGet + 1;
+    }
+  }, [state.buffer.length, state.level, state.prefetching]);
+
+  // 4) Konzumace 1 věty z bufferu (náhodný výběr)
+  const getNextSentence = () => {
+    if (state.buffer.length === 0) return null;
+    const idx = Math.floor(Math.random() * state.buffer.length);
+    const copy = [...state.buffer];
+    const [picked] = copy.splice(idx, 1);
+    setState((s) => ({ ...s, buffer: copy }));
+    return picked;
+  };
+
+  // Vracíme debouncovaný flag pro UI
+  return {
+    buffer: state.buffer,
+    prefetching: prefetchVisible,
+    setLevel: (lvl: Level) => setState((s) => ({ ...s, level: lvl })),
+    getNextSentence,
+  };
+}
