@@ -12,18 +12,25 @@ export type Sentence = {
 export const LEVELS = ["A2", "B1", "B2"] as const;
 export type Level = (typeof LEVELS)[number];
 
-// --- Pomocná funkce: načti balík vět pro daný level ---
-async function loadBatch(level: Level): Promise<Sentence[]> {
+/**
+ * Loader pro statické soubory v `public/data/`:
+ * očekává soubory s názvem `sentences-<LEVEL>-<PAGE>.json` (např. sentences-A2-1.json).
+ * JSON může být buď pole vět, nebo objekt { items: Sentence[] }.
+ */
+async function loadBatchFromPublic(level: Level, page: number): Promise<{ items: Sentence[]; eof: boolean }> {
+  const url = `/data/sentences-${level}-${page}.json`;
   try {
-    // Přizpůsob si endpoint podle projektu.
-    // Očekává se odpověď tvaru: { items: Sentence[] }
-    const res = await fetch(`/api/sentences?level=${level}`, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(url, { cache: "no-store" }); // pro jistotu ignoruj cache během vývoje
+    if (!res.ok) {
+      // 404 => další stránka neexistuje
+      return { items: [], eof: res.status === 404 };
+    }
     const data = await res.json();
-    return Array.isArray(data?.items) ? (data.items as Sentence[]) : [];
+    const items: Sentence[] = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+    return { items, eof: false };
   } catch (e) {
-    console.warn("loadBatch failed:", e);
-    return [];
+    console.warn("loadBatchFromPublic failed:", url, e);
+    return { items: [], eof: false };
   }
 }
 
@@ -32,16 +39,42 @@ export function useSentenceSource(initialLevel: Level) {
   const [buffer, setBuffer] = useState<Sentence[]>([]);
   const [prefetching, setPrefetching] = useState(false);
 
-  // Zamezí paralelním fetchům
+  // Udržujeme číslo stránky pro daný level; začínáme na 1
+  const pageRef = useRef<number>(1);
   const inflightRef = useRef(false);
+  const eofRef = useRef(false); // true, když narazíme na 404 pro aktuální level/page
+
+  // Reset při změně levelu
+  useEffect(() => {
+    pageRef.current = 1;
+    eofRef.current = false;
+    setBuffer([]);
+  }, [level]);
 
   const prefetch = useCallback(async (): Promise<Sentence[]> => {
     if (inflightRef.current) return [];
     inflightRef.current = true;
     setPrefetching(true);
     try {
-      const items = await loadBatch(level);
-      if (items.length) setBuffer((prev) => [...prev, ...items]);
+      // Pokud jsme dojeli na konec (eof), začni znovu od první stránky, ať hra nikdy nezůstane bez dat
+      if (eofRef.current) {
+        pageRef.current = 1;
+        eofRef.current = false;
+      }
+
+      const { items, eof } = await loadBatchFromPublic(level, pageRef.current);
+
+      if (eof) {
+        // značka konce – při příštím pokusu se wrapneme na začátek
+        eofRef.current = true;
+        return [];
+      }
+
+      if (items.length) {
+        // posuň stránku až po úspěšném načtení
+        pageRef.current += 1;
+        setBuffer((prev) => [...prev, ...items]);
+      }
       return items;
     } finally {
       setPrefetching(false);
@@ -49,68 +82,4 @@ export function useSentenceSource(initialLevel: Level) {
     }
   }, [level]);
 
-  // Když se změní level: vyčisti buffer a přednačti
-  useEffect(() => {
-    setBuffer([]);
-    prefetch();
-  }, [level, prefetch]);
-
-  // Udržuj buffer doplněný (když klesne pod práh, přednačti)
-  useEffect(() => {
-    const THRESHOLD = 2; // když v bufferu zbývají <=2 věty, přednačti další
-    if (buffer.length <= THRESHOLD && !prefetching) {
-      prefetch();
-    }
-  }, [buffer.length, prefetching, prefetch]);
-
-  // Vrací další větu. Pokud je buffer prázdný, zkusí rychlý fetch s timeoutem.
-  const getNextSentence = useCallback(async (): Promise<Sentence | null> => {
-    // 1) Máme něco v bufferu? Vrať hned.
-    if (buffer.length > 0) {
-      const [head, ...rest] = buffer;
-      setBuffer(rest);
-      return head;
-    }
-
-    // 2) Buffer je prázdný → zkus okamžitě přednačíst s krátkým čekáním
-    const deadline = Date.now() + 1500; // ~1.5 s na rychlé doplnění
-    let firstBatch: Sentence[] = [];
-
-    if (!prefetching && !inflightRef.current) {
-      firstBatch = await prefetch();
-    }
-
-    // Pokud hned po prefetchi nic nepřišlo, krátce polluj
-    while (firstBatch.length === 0 && Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, 200));
-      if (buffer.length > 0) break; // stav se změnil reaktivně
-    }
-
-    // Zkus znovu odebrat z bufferu (mohlo se mezitím naplnit)
-    if (buffer.length > 0) {
-      let next: Sentence | null = null;
-      setBuffer((prev) => {
-        if (prev.length === 0) return prev;
-        next = prev[0];
-        return prev.slice(1);
-      });
-      return next;
-    }
-
-    // Jako poslední šance: pokud jsme něco stáhli my (firstBatch), ale buffer
-    // se ještě nestihl propsat, vezmi první a zbytek připoj do bufferu ručně.
-    if (firstBatch.length > 0) {
-      const [head, ...rest] = firstBatch;
-      if (rest.length) setBuffer((prev) => [...prev, ...rest]);
-      return head;
-    }
-
-    // Nic není k dispozici.
-    return null;
-  }, [buffer, prefetch, prefetching]);
-
-  return useMemo(
-    () => ({ buffer, prefetching, setLevel, getNextSentence }),
-    [buffer, prefetching, setLevel, getNextSentence]
-  );
-}
+  // Udržuj buffer doplněný; když klesne pod práh, přednačti
