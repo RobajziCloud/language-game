@@ -4,30 +4,37 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 export type Token = { w: string; pos: string; meaning: string };
 export type Sentence = {
   id: string;
-  english: string[];
-  tokens: Token[];
-  explanation: string;
+  english: string[]; // správné pořadí slov
+  tokens: Token[]; // tokeny se slovními druhy + významy
+  explanation: string; // slovní vysvětlení věty
 };
 
 export const LEVELS = ["A2", "B1", "B2"] as const;
 export type Level = (typeof LEVELS)[number];
 
-async function loadBatchFromPublic(level: Level, page: number): Promise<{ items: Sentence[]; eof: boolean }> {
-  const url = `/data/sentences-${level}-${page}.json`;
-  console.log("Loading sentences from:", url);
+/**
+ * ***LOCKDOWN*** verze bez stránkování: vždy čte pouze
+ *   /data/sentences-<LEVEL>-1.json
+ * aby nikdy nevolala -2.json, -3.json atd.
+ */
+async function loadFromPublicSingle(level: Level): Promise<Sentence[]> {
+  const url = `/data/sentences-${level}-1.json`;
   try {
     const res = await fetch(url, { cache: "no-store" });
-    console.log("Fetch status:", res.status);
     if (!res.ok) {
-      return { items: [], eof: res.status === 404 };
+      console.warn("loadFromPublicSingle: HTTP", res.status, url);
+      return [];
     }
     const data = await res.json();
-    const items: Sentence[] = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
-    console.log("Loaded items count:", items.length);
-    return { items, eof: false };
+    const items: Sentence[] = Array.isArray(data)
+      ? data
+      : Array.isArray((data as any)?.items)
+      ? (data as any).items
+      : [];
+    return items;
   } catch (e) {
-    console.error("loadBatchFromPublic failed:", url, e);
-    return { items: [], eof: false };
+    console.error("loadFromPublicSingle failed:", e);
+    return [];
   }
 }
 
@@ -36,16 +43,16 @@ export function useSentenceSource(initialLevel: Level) {
   const [buffer, setBuffer] = useState<Sentence[]>([]);
   const [prefetching, setPrefetching] = useState(false);
 
+  // živá reference, abychom v callbacku nečetli zastaralý stav
   const bufferRef = useRef<Sentence[]>(buffer);
-  useEffect(() => { bufferRef.current = buffer; }, [buffer]);
-
-  const pageRef = useRef<number>(1);
-  const inflightRef = useRef(false);
-  const eofRef = useRef(false);
-
   useEffect(() => {
-    pageRef.current = 1;
-    eofRef.current = false;
+    bufferRef.current = buffer;
+  }, [buffer]);
+
+  const inflightRef = useRef(false);
+
+  // při změně levelu vyčisti buffer
+  useEffect(() => {
     setBuffer([]);
   }, [level]);
 
@@ -54,20 +61,8 @@ export function useSentenceSource(initialLevel: Level) {
     inflightRef.current = true;
     setPrefetching(true);
     try {
-      if (eofRef.current) {
-        pageRef.current = 1;
-        eofRef.current = false;
-      }
-
-      const { items, eof } = await loadBatchFromPublic(level, pageRef.current);
-
-      if (eof) {
-        eofRef.current = true;
-        return [];
-      }
-
+      const items = await loadFromPublicSingle(level); // ***jen -1.json***
       if (items.length) {
-        pageRef.current += 1;
         setBuffer((prev) => [...prev, ...items]);
       }
       return items;
@@ -77,6 +72,7 @@ export function useSentenceSource(initialLevel: Level) {
     }
   }, [level]);
 
+  // drž buffer lehce naplněný
   useEffect(() => {
     const THRESHOLD = 1;
     if (buffer.length <= THRESHOLD && !prefetching) {
@@ -84,6 +80,7 @@ export function useSentenceSource(initialLevel: Level) {
     }
   }, [buffer.length, prefetching, prefetch]);
 
+  // vrať další větu – buď z bufferu, nebo hned první z čerstvě načtené dávky
   const getNextSentence = useCallback(async (): Promise<Sentence | null> => {
     if (bufferRef.current.length > 0) {
       let next: Sentence | null = null;
@@ -102,7 +99,6 @@ export function useSentenceSource(initialLevel: Level) {
       if (rest.length) setBuffer((prev) => [...prev, ...rest]);
       return first;
     }
-
     return null;
   }, [prefetch, prefetching]);
 
