@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,6 +9,8 @@ import { useSentenceSource, LEVELS, type Sentence } from "@/app/hooks/useSentenc
 type Verdict = "correct" | "wrong" | null;
 type Token = { w: string; pos: string; meaning: string };
 type Pack = { id: string; english: string[]; tokens: Token[]; explanation: string };
+
+type Slot = { id: string; token: string | null };
 
 function shuffle<T>(arr: T[]) {
   const a = [...arr];
@@ -44,50 +45,54 @@ function Chip(state: Verdict) {
   );
 }
 
-type Slot = { id: string; token: string | null };
-
 export default function Page() {
   const [loading, setLoading] = useState(true);
   const [loadingStep, setLoadingStep] = useState(0);
   const [round, setRound] = useState(1);
   const [stats, setStats] = useState({ rounds: 0, correctTokens: 0, totalTokens: 0 });
-
-  const [level, setLevel] = useState<"A2"|"B1"|"B2">("A2");
+  const [level, setLevel] = useState<"A2" | "B1" | "B2">("A2");
   const { buffer, prefetching, setLevel: applyLevel, getNextSentence } = useSentenceSource(level);
   const [pack, setPack] = useState<Pack | null>(null);
-
   const [pool, setPool] = useState<string[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [verdict, setVerdict] = useState<Verdict[]>([]);
   const [showExplain, setShowExplain] = useState(false);
-  const [activeToken, setActiveToken] = useState<string | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => setLoadingStep((s) => (s + 1) % 4), 700);
     const t = setTimeout(() => setLoading(false), 2600);
-    return () => { clearInterval(id); clearTimeout(t); };
+    return () => {
+      clearInterval(id);
+      clearTimeout(t);
+    };
   }, []);
 
-  useEffect(() => { applyLevel(level); }, [level, applyLevel]);
+  useEffect(() => {
+    applyLevel(level);
+  }, [level, applyLevel]);
 
   // initialize first sentence when buffer fills
   useEffect(() => {
-    if (!pack && buffer.length > 0) {
-      const s = await getNextSentence();
-      if (s) {
-        const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
-        setPack(p);
-        setSlots(p.english.map((_, i) => ({ id: `s-0-${i}`, token: null })));
-        setPool(shuffle(p.english));
-        setVerdict(Array(p.english.length).fill(null));
+    const init = async () => {
+      if (!pack && buffer.length > 0) {
+        const s = await getNextSentence();
+        if (s) {
+          const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
+          setPack(p);
+          setSlots(p.english.map((_, i) => ({ id: `s-0-${i}`, token: null })));
+          setPool(shuffle(p.english));
+          setVerdict(Array(p.english.length).fill(null));
+        }
       }
-    }
+    };
+    init();
   }, [buffer, pack, getNextSentence]);
 
   const onDragStart = (word: string) => (e: React.DragEvent) => {
     e.dataTransfer.setData("text/plain", word);
     e.dataTransfer.effectAllowed = "move";
   };
+
   const getData = (e: React.DragEvent) => e.dataTransfer.getData("text/plain");
 
   const onDropToSlot = (slotIndex: number) => (e: React.DragEvent) => {
@@ -128,19 +133,23 @@ export default function Page() {
     const res = chosen.map((t, i) => (t && t === correct[i] ? "correct" : "wrong")) as Verdict[];
     setVerdict(res);
     const correctCount = res.filter((r) => r === "correct").length;
-    setStats((st) => ({ rounds: st.rounds + 1, correctTokens: st.correctTokens + correctCount, totalTokens: st.totalTokens + correct.length }));
+    setStats((st) => ({
+      rounds: st.rounds + 1,
+      correctTokens: st.correctTokens + correctCount,
+      totalTokens: st.totalTokens + correct.length,
+    }));
     setShowExplain(true);
   };
 
   const canVerify = useMemo(() => slots.length > 0 && slots.every((s) => s.token !== null), [slots]);
 
-  const onNextRound = () => {
+  const onNextRound = async () => {
     setShowExplain(false);
-    let s = await getNextSentence();      // <-- await
-    if (!s) {                             // když je buffer prázdný a hook teď dotahuje
-      await new Promise(r => setTimeout(r, 350));
+    let s = await getNextSentence();
+    if (!s) {
+      await new Promise((r) => setTimeout(r, 350));
       s = await getNextSentence();
-           }
+    }
     if (!s) return;
     const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
     setPack(p);
@@ -150,6 +159,9 @@ export default function Page() {
     setTimeout(() => setPool(shuffle(p.english)), 350);
     setVerdict(Array(p.english.length).fill(null));
   };
+
+  // ... (zbytek komponenty beze změny)
+
 
   if (loading || !pack) {
     const lines = ["Načítám slovník…", "Připravuji hru…", "Nastavuji UI…", "Zakládám uživatele…"];
