@@ -83,3 +83,55 @@ export function useSentenceSource(initialLevel: Level) {
   }, [level]);
 
   // Udržuj buffer doplněný; když klesne pod práh, přednačti
+  useEffect(() => {
+    const THRESHOLD = 3; // když zbývají ≤3 věty, dobij další stránku
+    if (buffer.length <= THRESHOLD && !prefetching) {
+      prefetch();
+    }
+  }, [buffer.length, prefetching, prefetch]);
+
+  // Vrací další větu. Když buffer dojde, pokusí se rychle přednačíst.
+  const getNextSentence = useCallback(async (): Promise<Sentence | null> => {
+    // 1) Máme něco v bufferu? Vrať hned.
+    if (buffer.length > 0) {
+      let next: Sentence | null = null;
+      setBuffer((prev) => {
+        if (prev.length === 0) return prev;
+        next = prev[0];
+        return prev.slice(1);
+      });
+      // paralelně dobij další dávku (nezdržuje UI)
+      prefetch();
+      return next;
+    }
+
+    // 2) Buffer je prázdný – zkus rychlé přednačtení s krátkým timeoutem
+    const deadline = Date.now() + 1200; // ~1.2 s tolerance
+    if (!prefetching && !inflightRef.current) {
+      await prefetch();
+    }
+    while (Date.now() < deadline) {
+      if (buffer.length > 0) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+
+    if (buffer.length > 0) {
+      let next: Sentence | null = null;
+      setBuffer((prev) => {
+        if (prev.length === 0) return prev;
+        next = prev[0];
+        return prev.slice(1);
+      });
+      prefetch();
+      return next;
+    }
+
+    // Nic k dispozici – vrať null, UI má vlastní fallback
+    return null;
+  }, [buffer, prefetch, prefetching]);
+
+  return useMemo(
+    () => ({ buffer, prefetching, setLevel, getNextSentence }),
+    [buffer, prefetching, setLevel, getNextSentence]
+  );
+}
