@@ -16,7 +16,7 @@ function shuffle<T>(arr: T[]) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[i - (i - j)]] = [a[i - (i - j)], a[i]]; // swap without temp var
+    [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
@@ -58,6 +58,7 @@ export default function Page() {
   const [verdict, setVerdict] = useState<Verdict[]>([]);
   const [showExplain, setShowExplain] = useState(false);
   const [isRoundLoading, setIsRoundLoading] = useState(false);
+  const [pendingNext, setPendingNext] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setLoadingStep((s) => (s + 1) % 4), 700);
@@ -145,7 +146,7 @@ export default function Page() {
   const canVerify = useMemo(() => slots.length > 0 && slots.every((s) => s.token !== null), [slots]);
 
   const onNextRound = async () => {
-    if (isRoundLoading) return;
+    if (isRoundLoading || pendingNext) return;
     setShowExplain(false);
 
     // Optimisticky resetni UI, ať není vidět "ověřený" stav
@@ -153,9 +154,11 @@ export default function Page() {
     setPool([]);
     // ponecháme stejný počet slotů, ale vyčistíme je
     setSlots((prev) => prev.map((sl) => ({ ...sl, token: null })));
-    setIsRoundLoading(true);
 
-    // Získej další větu s krátkým retry cyklem, kdyby buffer ještě dotahoval
+    setIsRoundLoading(true);
+    setPendingNext(true);
+
+    // Zkus okamžitě vytáhnout další větu (pár krátkých pokusů)
     let s: Sentence | null = null;
     for (let i = 0; i < 6; i++) {
       s = await getNextSentence();
@@ -163,23 +166,43 @@ export default function Page() {
       await new Promise((r) => setTimeout(r, 250));
     }
 
-    setIsRoundLoading(false);
-    if (!s) {
-      // fallback – zobraz uživateli, že chvilku
-      // (UI zůstává vyčištěné a tlačítko Další kolo je aktivní)
-      return;
+    if (s) {
+      const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
+      setPack(p);
+      setSlots(p.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
+      setRound((r) => r + 1);
+      setTimeout(() => {
+        setPool(shuffle(p.english));
+        setVerdict(Array(p.english.length).fill(null));
+      }, 250);
+      setIsRoundLoading(false);
+      setPendingNext(false);
     }
-
-    const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
-    setPack(p);
-    setSlots(p.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
-    setRound((r) => r + 1);
-    // pool zobrazíme s malým zpožděním kvůli animacím
-    setTimeout(() => {
-      setPool(shuffle(p.english));
-      setVerdict(Array(p.english.length).fill(null));
-    }, 250);
+    // Pokud s = null, necháme pendingNext=true a isRoundLoading=true
+    // a počkáme na efekt níže, který reaguje na doplnění bufferu.
   };
+
+  // Když čekáme na další větu (pendingNext=true) a dorazí nové věty v bufferu,
+  // pokusíme se ji hned vytáhnout a připravit kolo.
+  useEffect(() => {
+    if (!pendingNext) return;
+    let cancelled = false;
+    (async () => {
+      const s = await getNextSentence();
+      if (cancelled || !s) return;
+      const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
+      setPack(p);
+      setSlots(p.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
+      setRound((r) => r + 1);
+      setTimeout(() => {
+        setPool(shuffle(p.english));
+        setVerdict(Array(p.english.length).fill(null));
+      }, 250);
+      setIsRoundLoading(false);
+      setPendingNext(false);
+    })();
+    return () => { cancelled = true; };
+  }, [buffer, pendingNext, getNextSentence, round]);
 
   if (loading || !pack) {
     const lines = [
@@ -305,7 +328,9 @@ export default function Page() {
                     </AnimatePresence>
                     {pool.length === 0 && (
                       <div className="text-xs text-zinc-500">
-                        {isRoundLoading ? "Připravuji další větu…" : "Všechna slova jsou umístěná. Přesuň je zpět sem, pokud chceš změnit pořadí."}
+                        {isRoundLoading || pendingNext
+                          ? "Připravuji další větu…"
+                          : "Všechna slova jsou umístěná. Přesuň je zpět sem, pokud chceš změnit pořadí."}
                       </div>
                     )}
                   </div>
@@ -320,8 +345,8 @@ export default function Page() {
                       Ověřit větu <ArrowRight size={16} />
                     </Button>
                   ) : (
-                    <Button onClick={onNextRound} className="gap-2" disabled={isRoundLoading}>
-                      {isRoundLoading ? "Načítám…" : "Další kolo"} <ArrowRight size={16} />
+                    <Button onClick={onNextRound} className="gap-2" disabled={isRoundLoading || pendingNext}>
+                      {isRoundLoading || pendingNext ? "Načítám…" : "Další kolo"} <ArrowRight size={16} />
                     </Button>
                   )}
                 </div>
