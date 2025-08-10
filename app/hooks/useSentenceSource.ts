@@ -1,109 +1,93 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-export type Token = { w: string; pos: string; meaning: string };
-export type Sentence = {
-  id: string;
-  english: string[]; // správné pořadí slov
-  tokens: Token[]; // tokeny se slovními druhy + významy
-  explanation: string; // slovní vysvětlení věty
-};
+import { useEffect, useRef, useState } from "react";
 
 export const LEVELS = ["A2", "B1", "B2"] as const;
-export type Level = (typeof LEVELS)[number];
+export type Level = typeof LEVELS[number];
 
-/**
- * ***LOCKDOWN*** verze bez stránkování: vždy čte pouze
- *   /data/sentences-<LEVEL>-1.json
- * aby nikdy nevolala -2.json, -3.json atd.
- */
-async function loadFromPublicSingle(level: Level): Promise<Sentence[]> {
-  const url = `/data/sentences-${level}-1.json`;
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-      console.warn("loadFromPublicSingle: HTTP", res.status, url);
-      return [];
-    }
-    const data = await res.json();
-    const items: Sentence[] = Array.isArray(data)
-      ? data
-      : Array.isArray((data as any)?.items)
-      ? (data as any).items
-      : [];
-    return items;
-  } catch (e) {
-    console.error("loadFromPublicSingle failed:", e);
-    return [];
-  }
+type Token = { w: string; pos: string; meaning: string };
+export type Sentence = {
+  id: string;
+  level: string;
+  topic: string;
+  english: string[];
+  tokens: Token[];
+  explanation: string;
+};
+
+type SourceState = {
+  level: Level;
+  page: number;
+  buffer: Sentence[];
+  prefetching: boolean;
+};
+
+async function fetchShard(level: string, page: number): Promise<Sentence[]> {
+  const url = `/data/sentences-${level}-${page}.json`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Nepodařilo se načíst ${url}`);
+  return res.json();
 }
 
 export function useSentenceSource(initialLevel: Level) {
-  const [level, setLevel] = useState<Level>(initialLevel);
-  const [buffer, setBuffer] = useState<Sentence[]>([]);
-  const [prefetching, setPrefetching] = useState(false);
-
-  // živá reference, abychom v callbacku nečetli zastaralý stav
-  const bufferRef = useRef<Sentence[]>(buffer);
-  useEffect(() => {
-    bufferRef.current = buffer;
-  }, [buffer]);
+  const [state, setState] = useState<SourceState>({
+    level: initialLevel,
+    page: 1,
+    buffer: [],
+    prefetching: false,
+  });
 
   const inflightRef = useRef(false);
+  const nextPageRef = useRef(2);
 
-  // při změně levelu vyčisti buffer
   useEffect(() => {
-    setBuffer([]);
-  }, [level]);
-
-  const prefetch = useCallback(async (): Promise<Sentence[]> => {
-    if (inflightRef.current) return [];
+    let cancelled = false;
+    setState({ level: initialLevel, page: 1, buffer: [], prefetching: true });
+    nextPageRef.current = 2;
     inflightRef.current = true;
-    setPrefetching(true);
-    try {
-      const items = await loadFromPublicSingle(level); // ***jen -1.json***
-      if (items.length) {
-        setBuffer((prev) => [...prev, ...items]);
-      }
-      return items;
-    } finally {
-      setPrefetching(false);
-      inflightRef.current = false;
-    }
-  }, [level]);
 
-  // drž buffer lehce naplněný
-  useEffect(() => {
-    const THRESHOLD = 1;
-    if (buffer.length <= THRESHOLD && !prefetching) {
-      prefetch();
-    }
-  }, [buffer.length, prefetching, prefetch]);
-
-  // vrať další větu – buď z bufferu, nebo hned první z čerstvě načtené dávky
-  const getNextSentence = useCallback(async (): Promise<Sentence | null> => {
-    if (bufferRef.current.length > 0) {
-      let next: Sentence | null = null;
-      setBuffer((prev) => {
-        if (prev.length === 0) return prev;
-        next = prev[0];
-        return prev.slice(1);
+    fetchShard(initialLevel, 1)
+      .then((data) => {
+        if (cancelled) return;
+        setState((s) => ({ ...s, buffer: data }));
+      })
+      .catch(console.error)
+      .finally(() => {
+        inflightRef.current = false;
+        if (!cancelled) {
+          setState((s) => ({ ...s, prefetching: false }));
+        }
       });
-      if (!prefetching && !inflightRef.current) prefetch();
-      return next;
-    }
 
-    const batch = await prefetch();
-    if (batch.length > 0) {
-      const [first, ...rest] = batch;
-      if (rest.length) setBuffer((prev) => [...prev, ...rest]);
-      return first;
-    }
-    return null;
-  }, [prefetch, prefetching]);
+    return () => {
+      cancelled = true;
+    };
+  }, [initialLevel]);
 
-  return useMemo(
-    () => ({ buffer, prefetching, setLevel, getNextSentence }),
-    [buffer, prefetching, setLevel, getNextSentence]
-  );
+  const getNextSentence = async () => {
+    if (state.buffer.length === 0 && !inflightRef.current) {
+      inflightRef.current = true;
+      try {
+        const data = await fetchShard(state.level, nextPageRef.current);
+        nextPageRef.current++;
+        setState((s) => ({ ...s, buffer: data }));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        inflightRef.current = false;
+      }
+      return null; // UI může zobrazit spinner
+    }
+    const idx = Math.floor(Math.random() * state.buffer.length);
+    const copy = [...state.buffer];
+    const [picked] = copy.splice(idx, 1);
+    setState((s) => ({ ...s, buffer: copy }));
+    return picked;
+  };
+
+  return {
+    buffer: state.buffer,
+    prefetching: state.prefetching,
+    setLevel: (lvl: Level) => setState((s) => ({ ...s, level: lvl })),
+    getNextSentence,
+  };
 }
