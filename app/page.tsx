@@ -185,12 +185,25 @@ export default function Page() {
       return;
     }
 
-    const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
-    setPack(p);
-    setSlots(p.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
-    setPool(shuffle(p.english));
-    setVerdict(Array(p.english.length).fill(null));
-    setRound((r) => r + 1);
+    if (s && Array.isArray(s.english) && s.english.length > 0) {
+    const p: Pack = {
+    id: s.id ?? String(Date.now()),
+    english: s.english,
+    tokens: Array.isArray(s.tokens) && s.tokens.length
+      ? s.tokens
+      : s.english.map((w) => ({ w, pos: "", meaning: "" })),
+    explanation: s.explanation ?? "",
+    };
+   setPack(p);
+   setSlots(p.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
+   setPool(shuffle(p.english));
+   setVerdict(Array(p.english.length).fill(null));
+   setRound((r) => r + 1);
+   } else if (s) {
+   console.error("⚠️ Další věta neobsahuje validní english pole:", s);
+   } else {
+  console.warn("Nepodařilo se načíst další větu do 7s");
+  }
 
     setTimeout(() => setTransitioning(false), 0);
   };
