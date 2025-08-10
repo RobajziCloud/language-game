@@ -145,4 +145,130 @@ async function fetchSentence(path: string, level: Level): Promise<Sentence | nul
   //    - tvar "A2-8": zkusíme i /data/A2-8.json a /data/A2/8.json
   if (/^[A-Za-z]\d-\d+$/.test(bare)) {
     push(`/data/${bare}.json`);                // /data/A2-8.json
-    const [, n]()
+    const [, num] = bare.split("-");
+    if (num) push(`/data/${level}/${num}.json`); // /data/A2/8.json
+  }
+
+  // 5) ještě úplný fallback: když je to už s /data/... ale bez .json
+  if (bare.startsWith(`${level}/`) && !bare.endsWith(".json")) {
+    push(`/data/${bare}.json`);
+  }
+
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        console.warn("[SRC] Soubor nejde načíst:", url, res.status);
+        continue;
+      }
+      const json = await res.json();
+      const parsed = parseSentence(json);
+      if (!parsed) {
+        console.error("[SRC] Soubor nemá očekávaný formát (chybí english):", url, json);
+        continue;
+      }
+      return parsed;
+    } catch (e) {
+      console.warn("[SRC] Chyba při načítání věty:", url, e);
+    }
+  }
+  return null;
+}
+
+/* ---------- Hook ---------- */
+
+const BUFFER_SIZE = 4;
+
+export function useSentenceSource(initialLevel: Level) {
+  const [level, setLevelState] = useState<Level>(initialLevel);
+  const [prefetching, setPrefetching] = useState(false);
+  const [buffer, setBuffer] = useState<Sentence[]>([]);
+  const indexRef = useRef<string[]>([]);
+  const usedRef = useRef<Set<string>>(new Set());
+  const abortRef = useRef<AbortController | null>(null);
+
+  const pickNextPath = useCallback((): string | null => {
+    const remaining = indexRef.current.filter((p) => !usedRef.current.has(p));
+    if (remaining.length === 0) {
+      usedRef.current.clear();
+      const all = indexRef.current.slice();
+      if (!all.length) return null;
+      return all[Math.floor(Math.random() * all.length)];
+    }
+    return remaining[Math.floor(Math.random() * remaining.length)];
+  }, []);
+
+  const prefill = useCallback(async () => {
+    if (prefetching) return;
+    setPrefetching(true);
+
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    try {
+      if (!indexRef.current.length) {
+        indexRef.current = await fetchIndex(level);
+        usedRef.current.clear();
+      }
+
+      const next: Sentence[] = [];
+      while (!ac.signal.aborted && next.length + buffer.length < BUFFER_SIZE) {
+        const path = pickNextPath();
+        if (!path) break;
+        usedRef.current.add(path);
+        const s = await fetchSentence(path, level); // ← předáváme level
+        if (ac.signal.aborted) break;
+        if (s) next.push(s);
+      }
+
+      if (!ac.signal.aborted && next.length) {
+        setBuffer((b) => [...b, ...next]);
+      }
+    } finally {
+      if (!ac.signal.aborted) setPrefetching(false);
+    }
+  }, [level, pickNextPath, buffer.length, prefetching]);
+
+  // Prefill při mountu / změně levelu
+  useEffect(() => {
+    prefill();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level]);
+
+  // Udržuj buffer plný
+  useEffect(() => {
+    if (buffer.length < Math.max(1, BUFFER_SIZE - 2)) {
+      prefill();
+    }
+  }, [buffer.length, prefill]);
+
+  const getNextSentence = useCallback((): Sentence | null => {
+    if (buffer.length === 0) return null;
+    const [first, ...rest] = buffer;
+    setBuffer(rest);
+    return first ?? null;
+  }, [buffer]);
+
+  const setLevel = useCallback(
+    (l: Level) => {
+      if (l === level) return;
+      abortRef.current?.abort();
+      indexRef.current = [];
+      usedRef.current.clear();
+      setBuffer([]);
+      setLevelState(l);
+    },
+    [level]
+  );
+
+  return useMemo(
+    () => ({
+      buffer,
+      prefetching,
+      setLevel,
+      getNextSentence,
+    }),
+    [buffer, prefetching, setLevel, getNextSentence]
+  );
+}
