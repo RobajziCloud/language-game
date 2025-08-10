@@ -50,7 +50,7 @@ export default function Page() {
   const [round, setRound] = useState(1);
   const [stats, setStats] = useState({ rounds: 0, correctTokens: 0, totalTokens: 0 });
   // ✅ Nastavíme výchozí obtížnost na A1
-  const [level, setLevel] = useState<"A1" | "A2" | "B1" | "B2">("A1");
+  const [level, setLevel] = useState<"A2" | "B1" | "B2">("A2");
   const { buffer, prefetching, setLevel: applyLevel, getNextSentence } = useSentenceSource(level);
   const [pack, setPack] = useState<Pack | null>(null);
   const [pool, setPool] = useState<string[]>([]);
@@ -67,7 +67,7 @@ export default function Page() {
     };
   }, []);
 
-  // ✅ Po prvním načtení rovnou aplikujeme A1 a načteme první větu
+  // ✅ Po prvním načtení rovnou aplikujeme A2 a načteme první větu
   useEffect(() => {
     applyLevel(level);
     setShowExplain(false);
