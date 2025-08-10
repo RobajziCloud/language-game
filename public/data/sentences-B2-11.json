@@ -1,0 +1,72 @@
+[
+  {
+    "id": "B2-11",
+    "level": "B2",
+    "topic": "opinions",
+    "english": [
+      "By",
+      "the",
+      "time",
+      "we",
+      "arrived",
+      "the",
+      "meeting",
+      "had",
+      "already",
+      "started"
+    ],
+    "tokens": [
+      {
+        "w": "By",
+        "pos": "preposition",
+        "meaning": "before or at"
+      },
+      {
+        "w": "the",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "time",
+        "pos": "noun",
+        "meaning": "point in time"
+      },
+      {
+        "w": "we",
+        "pos": "pronoun",
+        "meaning": "the speaker and others"
+      },
+      {
+        "w": "arrived",
+        "pos": "verb",
+        "meaning": "came to a place"
+      },
+      {
+        "w": "the",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "meeting",
+        "pos": "noun",
+        "meaning": "gathering"
+      },
+      {
+        "w": "had",
+        "pos": "auxiliary",
+        "meaning": "past perfect"
+      },
+      {
+        "w": "already",
+        "pos": "adverb",
+        "meaning": "before expected"
+      },
+      {
+        "w": "started",
+        "pos": "verb",
+        "meaning": "begun"
+      }
+    ],
+    "explanation": "'By the time' + past perfect shows an action completed before another past event."
+  }
+]

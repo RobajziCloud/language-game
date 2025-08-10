@@ -1,0 +1,84 @@
+[
+  {
+    "id": "B2-3",
+    "level": "B2",
+    "topic": "opinions",
+    "english": [
+      "The",
+      "more",
+      "I",
+      "read",
+      "about",
+      "history",
+      "the",
+      "more",
+      "I",
+      "want",
+      "to",
+      "travel"
+    ],
+    "tokens": [
+      {
+        "w": "The",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "more",
+        "pos": "adjective",
+        "meaning": "greater in amount"
+      },
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "read",
+        "pos": "verb",
+        "meaning": "look at and understand text"
+      },
+      {
+        "w": "about",
+        "pos": "preposition",
+        "meaning": "regarding"
+      },
+      {
+        "w": "history",
+        "pos": "noun",
+        "meaning": "study of the past"
+      },
+      {
+        "w": "the",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "more",
+        "pos": "adjective",
+        "meaning": "greater in amount"
+      },
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "want",
+        "pos": "verb",
+        "meaning": "desire"
+      },
+      {
+        "w": "to",
+        "pos": "particle",
+        "meaning": "infinitive marker"
+      },
+      {
+        "w": "travel",
+        "pos": "verb",
+        "meaning": "go to different places"
+      }
+    ],
+    "explanation": "The structure 'The more..., the more...' shows a proportional relationship."
+  }
+]

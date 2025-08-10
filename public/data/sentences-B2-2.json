@@ -1,0 +1,78 @@
+[
+  {
+    "id": "B2-2",
+    "level": "B2",
+    "topic": "opinions",
+    "english": [
+      "I",
+      "had",
+      "never",
+      "considered",
+      "working",
+      "remotely",
+      "until",
+      "the",
+      "pandemic",
+      "changed",
+      "everything"
+    ],
+    "tokens": [
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "had",
+        "pos": "auxiliary",
+        "meaning": "past perfect"
+      },
+      {
+        "w": "never",
+        "pos": "adverb",
+        "meaning": "at no time"
+      },
+      {
+        "w": "considered",
+        "pos": "verb",
+        "meaning": "thought about"
+      },
+      {
+        "w": "working",
+        "pos": "verb",
+        "meaning": "doing a job"
+      },
+      {
+        "w": "remotely",
+        "pos": "adverb",
+        "meaning": "from a distance"
+      },
+      {
+        "w": "until",
+        "pos": "preposition",
+        "meaning": "up to the time"
+      },
+      {
+        "w": "the",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "pandemic",
+        "pos": "noun",
+        "meaning": "global disease outbreak"
+      },
+      {
+        "w": "changed",
+        "pos": "verb",
+        "meaning": "became different"
+      },
+      {
+        "w": "everything",
+        "pos": "pronoun",
+        "meaning": "all things"
+      }
+    ],
+    "explanation": "Past perfect ('had never considered') shows the action was before another past event."
+  }
+]

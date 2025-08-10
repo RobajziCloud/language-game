@@ -1,0 +1,78 @@
+[
+  {
+    "id": "B2-9",
+    "level": "B2",
+    "topic": "opinions",
+    "english": [
+      "Little",
+      "did",
+      "I",
+      "know",
+      "that",
+      "this",
+      "trip",
+      "would",
+      "change",
+      "my",
+      "life"
+    ],
+    "tokens": [
+      {
+        "w": "Little",
+        "pos": "adverb",
+        "meaning": "not much"
+      },
+      {
+        "w": "did",
+        "pos": "auxiliary",
+        "meaning": "past tense emphasis"
+      },
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "know",
+        "pos": "verb",
+        "meaning": "be aware"
+      },
+      {
+        "w": "that",
+        "pos": "conjunction",
+        "meaning": "introducer"
+      },
+      {
+        "w": "this",
+        "pos": "determiner",
+        "meaning": "specific"
+      },
+      {
+        "w": "trip",
+        "pos": "noun",
+        "meaning": "journey"
+      },
+      {
+        "w": "would",
+        "pos": "modal",
+        "meaning": "future in the past"
+      },
+      {
+        "w": "change",
+        "pos": "verb",
+        "meaning": "make different"
+      },
+      {
+        "w": "my",
+        "pos": "pronoun",
+        "meaning": "belonging to me"
+      },
+      {
+        "w": "life",
+        "pos": "noun",
+        "meaning": "existence"
+      }
+    ],
+    "explanation": "'Little did I know...' is used to show surprise about the future."
+  }
+]

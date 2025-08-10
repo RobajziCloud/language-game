@@ -1,0 +1,78 @@
+[
+  {
+    "id": "B2-4",
+    "level": "B2",
+    "topic": "opinions",
+    "english": [
+      "Had",
+      "I",
+      "known",
+      "about",
+      "the",
+      "job",
+      "earlier",
+      "I",
+      "would",
+      "have",
+      "applied"
+    ],
+    "tokens": [
+      {
+        "w": "Had",
+        "pos": "auxiliary",
+        "meaning": "past perfect inversion"
+      },
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "known",
+        "pos": "verb",
+        "meaning": "been aware of"
+      },
+      {
+        "w": "about",
+        "pos": "preposition",
+        "meaning": "regarding"
+      },
+      {
+        "w": "the",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "job",
+        "pos": "noun",
+        "meaning": "employment position"
+      },
+      {
+        "w": "earlier",
+        "pos": "adverb",
+        "meaning": "before now"
+      },
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "would",
+        "pos": "modal",
+        "meaning": "hypothetical"
+      },
+      {
+        "w": "have",
+        "pos": "auxiliary",
+        "meaning": "perfect aspect"
+      },
+      {
+        "w": "applied",
+        "pos": "verb",
+        "meaning": "made a formal request"
+      }
+    ],
+    "explanation": "Inversion of past perfect for formal conditionals ('Had I known...')."
+  }
+]

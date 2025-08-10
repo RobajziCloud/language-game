@@ -1,0 +1,84 @@
+[
+  {
+    "id": "B2-5",
+    "level": "B2",
+    "topic": "opinions",
+    "english": [
+      "Only",
+      "when",
+      "I",
+      "started",
+      "teaching",
+      "did",
+      "I",
+      "understand",
+      "the",
+      "challenges",
+      "teachers",
+      "face"
+    ],
+    "tokens": [
+      {
+        "w": "Only",
+        "pos": "adverb",
+        "meaning": "just"
+      },
+      {
+        "w": "when",
+        "pos": "conjunction",
+        "meaning": "at the time"
+      },
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "started",
+        "pos": "verb",
+        "meaning": "began"
+      },
+      {
+        "w": "teaching",
+        "pos": "verb",
+        "meaning": "instructing"
+      },
+      {
+        "w": "did",
+        "pos": "auxiliary",
+        "meaning": "past tense emphasis"
+      },
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "understand",
+        "pos": "verb",
+        "meaning": "comprehend"
+      },
+      {
+        "w": "the",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "challenges",
+        "pos": "noun",
+        "meaning": "difficulties"
+      },
+      {
+        "w": "teachers",
+        "pos": "noun",
+        "meaning": "instructors"
+      },
+      {
+        "w": "face",
+        "pos": "verb",
+        "meaning": "deal with"
+      }
+    ],
+    "explanation": "Fronting with 'Only when...' inverts subject and auxiliary verb."
+  }
+]

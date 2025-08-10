@@ -1,0 +1,72 @@
+[
+  {
+    "id": "B2-7",
+    "level": "B2",
+    "topic": "opinions",
+    "english": [
+      "No",
+      "sooner",
+      "had",
+      "she",
+      "sat",
+      "down",
+      "than",
+      "the",
+      "phone",
+      "rang"
+    ],
+    "tokens": [
+      {
+        "w": "No",
+        "pos": "adverb",
+        "meaning": "not"
+      },
+      {
+        "w": "sooner",
+        "pos": "adverb",
+        "meaning": "earlier"
+      },
+      {
+        "w": "had",
+        "pos": "auxiliary",
+        "meaning": "past perfect"
+      },
+      {
+        "w": "she",
+        "pos": "pronoun",
+        "meaning": "a woman"
+      },
+      {
+        "w": "sat",
+        "pos": "verb",
+        "meaning": "took a seat"
+      },
+      {
+        "w": "down",
+        "pos": "adverb",
+        "meaning": "towards a lower position"
+      },
+      {
+        "w": "than",
+        "pos": "conjunction",
+        "meaning": "introducing a comparison"
+      },
+      {
+        "w": "the",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "phone",
+        "pos": "noun",
+        "meaning": "telephone"
+      },
+      {
+        "w": "rang",
+        "pos": "verb",
+        "meaning": "made a sound"
+      }
+    ],
+    "explanation": "Negative adverbial fronting causes subject-auxiliary inversion."
+  }
+]

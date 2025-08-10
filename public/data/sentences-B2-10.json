@@ -1,0 +1,90 @@
+[
+  {
+    "id": "B2-10",
+    "level": "B2",
+    "topic": "opinions",
+    "english": [
+      "As",
+      "far",
+      "as",
+      "I",
+      "am",
+      "concerned",
+      "we",
+      "should",
+      "focus",
+      "on",
+      "quality",
+      "over",
+      "quantity"
+    ],
+    "tokens": [
+      {
+        "w": "As",
+        "pos": "conjunction",
+        "meaning": "insofar as"
+      },
+      {
+        "w": "far",
+        "pos": "adverb",
+        "meaning": "to the extent"
+      },
+      {
+        "w": "as",
+        "pos": "conjunction",
+        "meaning": "to the degree"
+      },
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "am",
+        "pos": "verb",
+        "meaning": "be (present)"
+      },
+      {
+        "w": "concerned",
+        "pos": "adjective",
+        "meaning": "having an opinion"
+      },
+      {
+        "w": "we",
+        "pos": "pronoun",
+        "meaning": "the speaker and others"
+      },
+      {
+        "w": "should",
+        "pos": "modal",
+        "meaning": "ought to"
+      },
+      {
+        "w": "focus",
+        "pos": "verb",
+        "meaning": "concentrate"
+      },
+      {
+        "w": "on",
+        "pos": "preposition",
+        "meaning": "about"
+      },
+      {
+        "w": "quality",
+        "pos": "noun",
+        "meaning": "standard of something"
+      },
+      {
+        "w": "over",
+        "pos": "preposition",
+        "meaning": "in preference to"
+      },
+      {
+        "w": "quantity",
+        "pos": "noun",
+        "meaning": "amount"
+      }
+    ],
+    "explanation": "'As far as I am concerned' introduces a personal opinion."
+  }
+]

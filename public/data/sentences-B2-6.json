@@ -1,0 +1,84 @@
+[
+  {
+    "id": "B2-6",
+    "level": "B2",
+    "topic": "opinions",
+    "english": [
+      "It",
+      "was",
+      "by",
+      "sheer",
+      "luck",
+      "that",
+      "we",
+      "caught",
+      "the",
+      "train",
+      "on",
+      "time"
+    ],
+    "tokens": [
+      {
+        "w": "It",
+        "pos": "pronoun",
+        "meaning": "dummy subject"
+      },
+      {
+        "w": "was",
+        "pos": "verb",
+        "meaning": "be (past)"
+      },
+      {
+        "w": "by",
+        "pos": "preposition",
+        "meaning": "due to"
+      },
+      {
+        "w": "sheer",
+        "pos": "adjective",
+        "meaning": "pure"
+      },
+      {
+        "w": "luck",
+        "pos": "noun",
+        "meaning": "good fortune"
+      },
+      {
+        "w": "that",
+        "pos": "conjunction",
+        "meaning": "introducer"
+      },
+      {
+        "w": "we",
+        "pos": "pronoun",
+        "meaning": "the speaker and others"
+      },
+      {
+        "w": "caught",
+        "pos": "verb",
+        "meaning": "got on"
+      },
+      {
+        "w": "the",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "train",
+        "pos": "noun",
+        "meaning": "rail vehicle"
+      },
+      {
+        "w": "on",
+        "pos": "preposition",
+        "meaning": "in a state of"
+      },
+      {
+        "w": "time",
+        "pos": "noun",
+        "meaning": "punctuality"
+      }
+    ],
+    "explanation": "'It was by sheer luck that...' emphasizes the reason."
+  }
+]

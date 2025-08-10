@@ -1,0 +1,78 @@
+[
+  {
+    "id": "B2-8",
+    "level": "B2",
+    "topic": "opinions",
+    "english": [
+      "I",
+      "would",
+      "rather",
+      "spend",
+      "money",
+      "on",
+      "experiences",
+      "than",
+      "on",
+      "material",
+      "things"
+    ],
+    "tokens": [
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "would",
+        "pos": "modal",
+        "meaning": "preference"
+      },
+      {
+        "w": "rather",
+        "pos": "adverb",
+        "meaning": "preferably"
+      },
+      {
+        "w": "spend",
+        "pos": "verb",
+        "meaning": "use money"
+      },
+      {
+        "w": "money",
+        "pos": "noun",
+        "meaning": "currency"
+      },
+      {
+        "w": "on",
+        "pos": "preposition",
+        "meaning": "used for"
+      },
+      {
+        "w": "experiences",
+        "pos": "noun",
+        "meaning": "activities and events"
+      },
+      {
+        "w": "than",
+        "pos": "conjunction",
+        "meaning": "in preference to"
+      },
+      {
+        "w": "on",
+        "pos": "preposition",
+        "meaning": "used for"
+      },
+      {
+        "w": "material",
+        "pos": "adjective",
+        "meaning": "physical"
+      },
+      {
+        "w": "things",
+        "pos": "noun",
+        "meaning": "objects"
+      }
+    ],
+    "explanation": "'Would rather' expresses preference."
+  }
+]
