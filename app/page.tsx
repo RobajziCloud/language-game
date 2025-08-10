@@ -90,23 +90,27 @@ export default function Page() {
     setRound(1);
   }, [level, applyLevel]);
 
-  // initialize first sentence when buffer fills
+  // robust initialize of first sentence (poll even if buffer is empty)
   useEffect(() => {
+    let cancelled = false;
     const init = async () => {
-      if (!pack && buffer.length > 0) {
-        const s = await getNextSentence();
-        if (s) {
-          const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
-          setPack(p);
-          setSlots(p.english.map((_, i) => ({ id: `s-0-${i}`, token: null })));
-          setPool(shuffle(p.english));
-          setVerdict(Array(p.english.length).fill(null));
-          setShowExplain(false);
-        }
+      if (pack) return;
+      const s = await waitForNextSentence(7000, 150);
+      if (cancelled) return;
+      if (s) {
+        const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
+        setPack(p);
+        setSlots(p.english.map((_, i) => ({ id: `s-0-${i}`, token: null })));
+        setPool(shuffle(p.english));
+        setVerdict(Array(p.english.length).fill(null));
+        setShowExplain(false);
+      } else {
+        console.warn("Nepodařilo se načíst první větu do 7s");
       }
     };
     init();
-  }, [buffer, pack, getNextSentence]);
+    return () => { cancelled = true; };
+  }, [pack, level, getNextSentence]);
 
   const onDragStart = (word: string) => (e: React.DragEvent) => {
     e.dataTransfer.setData("text/plain", word);
@@ -191,7 +195,7 @@ export default function Page() {
     setTimeout(() => setTransitioning(false), 0);
   };
 
-  if (loading || !pack) {
+  if (loading) {
     const lines = [
       "Načítám slovník…",
       "Připravuji hru…",
@@ -215,7 +219,7 @@ export default function Page() {
               </div>
               <div className="font-semibold tracking-wide text-lg">Lang Trainer</div>
             </div>
-            <div className="text-sm opacity-80 mb-2">{lines[Math.min(3, 0)]}</div>
+            <div className="text-sm opacity-80 mb-2">{lines[loadingStep]}</div>
             <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
               <motion.div
                 className="h-full bg-emerald-400/80"
@@ -288,7 +292,7 @@ export default function Page() {
               </CardHeader>
               <CardContent>
                 <div
-                  key={`slots-${pack.id}-${round}`}
+                  key={`slots-${pack?.id ?? 'none'}-${round}`}
                   className="flex flex-wrap gap-3 p-4 rounded-2xl bg-white/5 ring-1 ring-white/10 min-h-[88px]"
                   onDragOver={(e) => e.preventDefault()}
                 >
@@ -323,16 +327,20 @@ export default function Page() {
                   </div>
                 </div>
 
+                {!pack && (
+                  <div className="mt-4 text-sm text-zinc-400">Načítám první větu…</div>
+                )
+
                 <div className="mt-6 flex items-center justify-between">
                   <div className="text-xs text-zinc-400">
                     Tip: Slova můžeš libovolně přeskupovat přetažením mezi sloty a zásobníkem.
                   </div>
                   {!showExplain ? (
-                    <Button disabled={!canVerify || transitioning} onClick={onVerify} className="gap-2">
+                    <Button disabled={!pack || !canVerify || transitioning} onClick={onVerify} className="gap-2">
                       Ověřit větu <ArrowRight size={16} />
                     </Button>
                   ) : (
-                    <Button disabled={transitioning} onClick={onNextRound} className="gap-2">
+                    <Button disabled={!pack || transitioning} onClick={onNextRound} className="gap-2">
                       {transitioning ? "Načítám…" : "Další kolo"} <ArrowRight size={16} />
                     </Button>
                   )}
