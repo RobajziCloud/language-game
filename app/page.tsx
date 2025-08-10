@@ -57,10 +57,10 @@ export default function Page() {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [verdict, setVerdict] = useState<Verdict[]>([]);
   const [showExplain, setShowExplain] = useState(false);
-  const [transitioning, setTransitioning] = useState(false); // ⟵ během přechodu na další kolo
+  const [transitioning, setTransitioning] = useState(false);
 
-  // Pomocná funkce: spolehlivě získá další větu (čeká na naplnění bufferu)
-  const waitForNextSentence = async (timeoutMs = 4000, intervalMs = 120) => {
+  // Robust polling na další větu
+  const waitForNextSentence = async (timeoutMs = 7000, intervalMs = 150) => {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       const s = await getNextSentence();
@@ -70,6 +70,7 @@ export default function Page() {
     return null as Sentence | null;
   };
 
+  // Loader progress
   useEffect(() => {
     const id = setInterval(() => setLoadingStep((s) => (s + 1) % 4), 700);
     const t = setTimeout(() => setLoading(false), 2600);
@@ -79,9 +80,9 @@ export default function Page() {
     };
   }, []);
 
+  // Reset při změně levelu
   useEffect(() => {
     applyLevel(level);
-    // Při změně levelu vynulujeme stav tak, aby nezůstalo staré vyhodnocení
     setPack(null);
     setSlots([]);
     setPool([]);
@@ -90,7 +91,7 @@ export default function Page() {
     setRound(1);
   }, [level, applyLevel]);
 
-  // robust initialize of first sentence (poll even if buffer is empty)
+  // Inicializace první věty s pollingem
   useEffect(() => {
     let cancelled = false;
     const init = async () => {
@@ -109,7 +110,9 @@ export default function Page() {
       }
     };
     init();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [pack, level, getNextSentence]);
 
   const onDragStart = (word: string) => (e: React.DragEvent) => {
@@ -171,15 +174,13 @@ export default function Page() {
     if (transitioning) return;
     setTransitioning(true);
 
-    // Okamžitý reset UI, aby nezůstávaly výsledky z předchozího kola
     setShowExplain(false);
     setVerdict([]);
     setSlots([]);
     setPool([]);
 
-    let s = await waitForNextSentence(5000, 150);
+    const s = await waitForNextSentence(7000, 150);
     if (!s) {
-      // Když ani po čase není věta k dispozici, obnovíme předchozí stav tlačítek
       setTransitioning(false);
       return;
     }
@@ -191,7 +192,6 @@ export default function Page() {
     setVerdict(Array(p.english.length).fill(null));
     setRound((r) => r + 1);
 
-    // Malé zpoždění, ať se přechod vykreslí plynule
     setTimeout(() => setTransitioning(false), 0);
   };
 
@@ -329,7 +329,7 @@ export default function Page() {
 
                 {!pack && (
                   <div className="mt-4 text-sm text-zinc-400">Načítám první větu…</div>
-                )
+                )}
 
                 <div className="mt-6 flex items-center justify-between">
                   <div className="text-xs text-zinc-400">
@@ -361,8 +361,8 @@ export default function Page() {
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {pack.tokens.map((t) => (
-                      <WordInfo key={t.w} token={t} />)
-                    }
+                      <WordInfo key={t.w} token={t} />
+                    ))}
                   </div>
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
