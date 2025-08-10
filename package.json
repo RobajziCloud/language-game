@@ -28,4 +28,14 @@
     "tailwindcss": "3.4.9",
     "autoprefixer": "10.4.19"
   }
+  {
+  "scripts": {
+    "dev": "next dev",
+    "prebuild": "node scripts/gen-manifests.js --max=10",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "gen:index": "node scripts/gen-manifests.js --max=10"
+  }
+}
 }
