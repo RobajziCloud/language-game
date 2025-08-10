@@ -115,11 +115,12 @@ export default function Page() {
   useEffect(() => {
     if (!pack) return;
     // plný reset podle nové věty
-    setSlots(pack.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
-    setPool(shuffle(pack.english));
-    setVerdict(Array(pack.english.length).fill(null));
-    setShowExplain(false);
-  }, [pack?.id]);
+  const newSlots = pack.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null }));
+  setSlots(newSlots);
+  setPool(shuffle(pack.english));
+  setVerdict(Array(pack.english.length).fill(null));
+  setShowExplain(false);
+}, [pack?.id, round]);
 
   const onDragStart = (word: string) => (e: React.DragEvent) => {
     e.dataTransfer.setData("text/plain", word);
