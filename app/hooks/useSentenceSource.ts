@@ -42,7 +42,7 @@ function parseSentence(raw: any): Sentence | null {
       tokens:
         Array.isArray(raw.tokens) && raw.tokens.length
           ? (raw.tokens as Token[])
-          : english.map((w) => ({ w, pos: "", meaning: "" })),
+          : english.map((w: string) => ({ w, pos: "", meaning: "" })),
       explanation: typeof raw.explanation === "string" ? raw.explanation : "",
     };
   }
@@ -59,7 +59,7 @@ function parseSentence(raw: any): Sentence | null {
       tokens:
         Array.isArray(raw.tokens) && raw.tokens.length
           ? (raw.tokens as Token[])
-          : english.map((w) => ({ w, pos: "", meaning: "" })),
+          : english.map((w: string) => ({ w, pos: "", meaning: "" })),
       explanation: typeof raw.explanation === "string" ? raw.explanation : "",
     };
   }
