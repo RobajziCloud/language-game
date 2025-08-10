@@ -362,7 +362,7 @@ export default function Page() {
                   <div className="flex flex-wrap gap-2">
                     {pack.tokens.map((t) => (
                       <WordInfo key={t.w} token={t} />)
-                    )}
+                    }
                   </div>
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
