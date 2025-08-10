@@ -68,7 +68,14 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
+    // Přepnutí obtížnosti: přepni zdroj dat a resetuj UI,
+    // aby se hned načetla první věta nového levelu.
     applyLevel(level);
+    setShowExplain(false);
+    setPack(null);
+    setSlots([]);
+    setPool([]);
+    setVerdict([]);
   }, [level, applyLevel]);
 
   // initialize first sentence when buffer fills
@@ -321,3 +328,4 @@ function WordInfo({ token }: { token: Token }) {
     </div>
   );
 }
+
