@@ -25,71 +25,79 @@ function ensureArray(v: unknown): string[] | null {
   return null;
 }
 
-/** Bezpečný parser jedné věty – akceptuje několik formátů */
+/** Parser věty – akceptuje objekt i pole s jedním objektem */
 function parseSentence(raw: any): Sentence | null {
-  if (!raw || typeof raw !== "object") return null;
-
-  // 1) „ideální“ struktura
-  if (
-    (Array.isArray(raw.english) && raw.english.length) ||
-    (typeof raw.english === "string" && raw.english.trim())
-  ) {
-    const english = Array.isArray(raw.english)
-      ? raw.english.filter((w: any) => typeof w === "string")
-      : raw.english.trim().split(/\s+/);
-
-    return {
-      id: typeof raw.id === "string" ? raw.id : (raw.id?.toString?.() ?? crypto.randomUUID()),
-      english,
-      tokens:
-        Array.isArray(raw.tokens) && raw.tokens.length
-          ? (raw.tokens as Token[])
-          : english.map((w: string) => ({ w, pos: "", meaning: "" })),
-      explanation: typeof raw.explanation === "string" ? raw.explanation : "",
-    };
+  // pokud přijde pole, vezmeme první položku rekurzivně
+  if (Array.isArray(raw)) {
+    if (!raw.length) return null;
+    return parseSentence(raw[0]);
   }
 
-  // 2) fallbacky: { en: string[] } | { english: "one two" } | { sentence: "..." }
-  let english: string[] | null = null;
-  if (Array.isArray((raw as any).en)) english = (raw as any).en.filter((x: any) => typeof x === "string");
-  if (!english && typeof raw.english === "string") english = raw.english.trim().split(/\s+/);
-  if (!english && typeof (raw as any).sentence === "string")
-    english = (raw as any).sentence.trim().split(/\s+/);
+  if (!raw || typeof raw !== "object") return null;
 
+  const toEnglishArray = (): string[] | null => {
+    if (Array.isArray(raw.english) && raw.english.length && raw.english.every((w: any) => typeof w === "string")) {
+      return raw.english as string[];
+    }
+    if (typeof raw.english === "string" && raw.english.trim()) {
+      return raw.english.trim().split(/\s+/);
+    }
+    if (Array.isArray((raw as any).en)) {
+      return (raw as any).en.filter((x: any) => typeof x === "string");
+    }
+    if (typeof (raw as any).sentence === "string" && (raw as any).sentence.trim()) {
+      return (raw as any).sentence.trim().split(/\s+/);
+    }
+    return null;
+  };
+
+  const english = toEnglishArray();
   if (!english || !english.length) return null;
 
+  const id =
+    typeof raw.id === "string" && raw.id.trim()
+      ? raw.id
+      : (raw.id?.toString?.() ?? (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`));
+
+  const tokens: Token[] =
+    Array.isArray(raw.tokens) && raw.tokens.length
+      ? (raw.tokens as Token[])
+      : english.map((w) => ({ w, pos: "", meaning: "" }));
+
   return {
-    id: typeof raw.id === "string" ? raw.id : crypto.randomUUID(),
+    id,
     english,
-    tokens: english.map((w) => ({ w, pos: "", meaning: "" })),
+    tokens,
     explanation: typeof raw.explanation === "string" ? raw.explanation : "",
   };
 }
 
-/** Z jedné položky z indexu vyrobí sadu kandidátních URL pro fetch. */
+/** Z položky indexu vyrobí kandidátní URL pro fetch (vč. normalizace pomlček) */
 function buildCandidatesFromIndexEntry(entry: string, level: Level): string[] {
   const candidates: string[] = [];
   const push = (u: string) => !candidates.includes(u) && candidates.push(u);
 
-  const e = entry.trim();
+  // NORMALIZACE: en/em/figure dashes → '-'
+  const e = entry.trim().replace(/[\u2012-\u2015]/g, "-");
 
-  // Absolutní / relativní cesta s .json → použij přímo
+  // Absolutní HTTP(S) s .json → použij přímo
   if (/^https?:\/\//i.test(e) && e.endsWith(".json")) {
     push(e);
     return candidates;
   }
+  // Relativní cesta do /data s .json → použij přímo
   if (e.startsWith("/data/") && e.endsWith(".json")) {
     push(e);
     return candidates;
   }
 
-  // Bez /data/, ale už obsahuje „sentences-“ → doplň správnou cestu
+  // Už obsahuje "sentences-" → doplň /data
   if (e.startsWith("sentences-")) {
     const base = e.endsWith(".json") ? e : `${e}.json`;
     push(`/data/${base}`); // /data/sentences-A2-1.json
   }
 
-  // „A2-1“ → zkus preferenčně sentences- prefix, pak další tvary
+  // „A2-1“ → zkus preferenčně sentences-, pak další tvary
   if (/^[A-Za-z]\d-\d+$/.test(e)) {
     push(`/data/sentences-${e}.json`); // /data/sentences-A2-1.json
     push(`/data/${e}.json`);           // /data/A2-1.json
@@ -99,24 +107,24 @@ function buildCandidatesFromIndexEntry(entry: string, level: Level): string[] {
 
   // čisté číslo „1“ → odvozujeme z levelu
   if (/^\d+$/.test(e)) {
-    push(`/data/sentences-${level}-${e}.json`); // /data/sentences-A2-1.json
-    push(`/data/${level}/${e}.json`);           // /data/A2/1.json
+    push(`/data/sentences-${level}-${e}.json`);
+    push(`/data/${level}/${e}.json`);
   }
 
-  // „sentences-A2-1.json“ (bez /data/)
+  // „*.json“ bez /data → doplň /data
   if (e.endsWith(".json") && !e.startsWith("/")) {
     push(`/data/${e}`);
   }
 
-  // kompletní nouzový fallback
+  // nouzový fallback (zachytí třeba „A2/1.json“)
   if (candidates.length === 0) {
-    push(`/data/${e}`); // když už v indexu posíláš „A2/1.json“, tohle ho zachytí
+    push(`/data/${e}`);
   }
 
   return candidates;
 }
 
-/** Robustní načtení jedné věty s více fallbacky cest */
+/** Robustní načtení jedné věty s fallbacky cest */
 async function fetchOneSentence(entry: string, level: Level): Promise<Sentence | null> {
   const candidates = buildCandidatesFromIndexEntry(entry, level);
 
@@ -187,7 +195,7 @@ export function useSentenceSource(initialLevel: Level = "A2") {
   const indexRef = useRef<string[]>([]);
   const cursorRef = useRef<number>(0);
 
-  // Při změně levelu natáhni index a přednačti pár vět dopředu
+  // Při změně levelu natáhni index a přednačti pár vět
   useEffect(() => {
     let isActive = true;
 
@@ -196,13 +204,11 @@ export function useSentenceSource(initialLevel: Level = "A2") {
       try {
         const index = await fetchIndex(level);
 
-        // Když index obsahuje třeba "sentences-A2-1.json", necháme to tak;
-        // Když obsahuje jen "A2-1" nebo "1", postará se o to fetchOneSentence.
-        indexRef.current = index;
+        indexRef.current = index.map((e) => (e ? e.replace(/[\u2012-\u2015]/g, "-") : e)); // jistota náhrady pomlček
         cursorRef.current = 0;
 
-        // přednačti prvních pár vět (třeba 3)
-        const toPrefetch = index.slice(0, 3);
+        // přednačti prvních pár vět (např. 3)
+        const toPrefetch = indexRef.current.slice(0, 3);
         const next: Sentence[] = [];
         for (const entry of toPrefetch) {
           const s = await fetchOneSentence(entry, level);
@@ -223,7 +229,7 @@ export function useSentenceSource(initialLevel: Level = "A2") {
   }, [level]);
 
   const getNextSentence = useCallback(async (): Promise<Sentence | null> => {
-    // pokud už máme v bufferu, dej první
+    // pokud máme v bufferu, dej první
     if (buffer.length) {
       const [first, ...rest] = buffer;
       setBuffer(rest);
@@ -232,26 +238,29 @@ export function useSentenceSource(initialLevel: Level = "A2") {
 
     // jinak dobij jednu další z indexu
     const index = indexRef.current;
-    const i = cursorRef.current;
-    if (!index || i >= index.length) {
-      console.warn("[SRC] Index prázdný nebo konec seznamu.");
-      return null;
+    let i = cursorRef.current;
+
+    while (index && i < index.length) {
+      const entry = index[i++];
+      const s = await fetchOneSentence(entry, level);
+      if (s) {
+        cursorRef.current = i;
+        return s;
+      }
+      // když nevyšla, pokračuj dál
     }
 
-    const entry = index[i];
-    cursorRef.current = i + 1;
-
-    const s = await fetchOneSentence(entry, level);
-    if (s) return s;
-
-    // když se tahle nepovedla, jdi dál v seznamu
-    return getNextSentence();
-  }, [buffer]);
+    console.warn("[SRC] Index prázdný nebo konec seznamu.");
+    cursorRef.current = i;
+    return null;
+  }, [buffer, level]);
 
   const setLevel = useCallback(
     (l: Level) => {
       if (l === level) return;
       setLevelState(l);
+      // reset bufferu proběhne v useEffect výše
+      setBuffer([]);
     },
     [level]
   );
