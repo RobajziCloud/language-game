@@ -1,93 +1,143 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export const LEVELS = ["A2", "B1", "B2"] as const;
-export type Level = typeof LEVELS[number];
+export type Level = (typeof LEVELS)[number];
 
-type Token = { w: string; pos: string; meaning: string };
+export type Token = { w: string; pos: string; meaning: string };
 export type Sentence = {
-  id: string;
-  level: string;
-  topic: string;
+  id: string; // např. "A2-14"
   english: string[];
   tokens: Token[];
   explanation: string;
 };
 
-type SourceState = {
-  level: Level;
-  page: number;
-  buffer: Sentence[];
-  prefetching: boolean;
-};
+const MAX_PROBE = 60; // kolik souborů max. zkusíme najít (A2-1..60)
+const BUFFER_TARGET = 3; // kolik vět držet v zásobníku
 
-async function fetchShard(level: string, page: number): Promise<Sentence[]> {
-  const url = `/data/sentences-${level}-${page}.json`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Nepodařilo se načíst ${url}`);
-  return res.json();
+function pad2(n: number) {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+async function exists(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: "HEAD", cache: "force-cache" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function discoverIds(level: Level): Promise<string[]> {
+  // 1) Pokud existuje manifest /data/index-<level>.json, použijeme ho
+  try {
+    const mf = await fetch(`/data/index-${level}.json`, { cache: "force-cache" });
+    if (mf.ok) {
+      const ids: string[] = await mf.json();
+      if (Array.isArray(ids) && ids.length) return ids;
+    }
+  } catch {}
+
+  // 2) Jinak prohledáme existující soubory – podporujeme jak bez nuly, tak s nulou
+  const tasks: Promise<{ id: string; ok: boolean }>[] = [];
+  for (let i = 1; i <= MAX_PROBE; i++) {
+    const idPlain = `${level}-${i}`; // sentences-A2-14.json
+    const idPadded = `${level}-${pad2(i)}`; // sentences-A2-14.json i 0x
+    tasks.push(
+      (async () => ({ id: idPlain, ok: await exists(`/data/sentences-${idPlain}.json`) || await exists(`/data/sentences-${idPadded}.json`) }))()
+    );
+  }
+  const res = await Promise.all(tasks);
+  const ids = res.filter(r => r.ok).map(r => r.id);
+  return ids;
+}
+
+async function fetchSentenceById(id: string): Promise<Sentence | null> {
+  // Zkusíme nejdřív bez nuly, pak s nulou
+  const url1 = `/data/sentences-${id}.json`;
+  const url2 = `/data/sentences-${id.replace(/-(\d)$/,"-0$1")}.json`;
+  try {
+    const r1 = await fetch(url1, { cache: "no-cache" });
+    if (r1.ok) return await r1.json();
+    const r2 = await fetch(url2, { cache: "no-cache" });
+    if (r2.ok) return await r2.json();
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function useSentenceSource(initialLevel: Level) {
-  const [state, setState] = useState<SourceState>({
-    level: initialLevel,
-    page: 1,
-    buffer: [],
-    prefetching: false,
-  });
+  const [level, setLevel] = useState<Level>(initialLevel);
+  const [ids, setIds] = useState<string[]>([]);
+  const [cursor, setCursor] = useState(0);
+  const [buffer, setBuffer] = useState<Sentence[]>([]);
+  const [prefetching, setPrefetching] = useState(false);
+  const discoveringRef = useRef<Promise<void> | null>(null);
 
-  const inflightRef = useRef(false);
-  const nextPageRef = useRef(2);
+  // Objeví dostupné ID pro daný level
+  const ensureDiscovered = useCallback(async () => {
+    if (discoveringRef.current) return discoveringRef.current;
+    discoveringRef.current = (async () => {
+      const found = await discoverIds(level);
+      setIds(found);
+      setCursor(0);
+    })();
+    await discoveringRef.current;
+    discoveringRef.current = null;
+  }, [level]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setState({ level: initialLevel, page: 1, buffer: [], prefetching: true });
-    nextPageRef.current = 2;
-    inflightRef.current = true;
+  const refill = useCallback(async () => {
+    if (prefetching) return;
+    setPrefetching(true);
+    try {
+      await ensureDiscovered();
+      if (ids.length === 0) return;
 
-    fetchShard(initialLevel, 1)
-      .then((data) => {
-        if (cancelled) return;
-        setState((s) => ({ ...s, buffer: data }));
-      })
-      .catch(console.error)
-      .finally(() => {
-        inflightRef.current = false;
-        if (!cancelled) {
-          setState((s) => ({ ...s, prefetching: false }));
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [initialLevel]);
-
-  const getNextSentence = async () => {
-    if (state.buffer.length === 0 && !inflightRef.current) {
-      inflightRef.current = true;
-      try {
-        const data = await fetchShard(state.level, nextPageRef.current);
-        nextPageRef.current++;
-        setState((s) => ({ ...s, buffer: data }));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        inflightRef.current = false;
+      const work: Promise<Sentence | null>[] = [];
+      let c = cursor;
+      while (c < ids.length && work.length + buffer.length < BUFFER_TARGET) {
+        const id = ids[c++];
+        work.push(fetchSentenceById(id));
       }
-      return null; // UI může zobrazit spinner
+      const results = await Promise.all(work);
+      const next = results.filter(Boolean) as Sentence[];
+      setBuffer((b) => [...b, ...next]);
+      setCursor(c);
+      // když jsme na konci seznamu, začneme od začátku (nekonečný cyklus)
+      if (c >= ids.length && ids.length > 0) setCursor(0);
+    } finally {
+      setPrefetching(false);
     }
-    const idx = Math.floor(Math.random() * state.buffer.length);
-    const copy = [...state.buffer];
-    const [picked] = copy.splice(idx, 1);
-    setState((s) => ({ ...s, buffer: copy }));
-    return picked;
-  };
+  }, [buffer.length, cursor, ensureDiscovered, ids, prefetching]);
 
-  return {
-    buffer: state.buffer,
-    prefetching: state.prefetching,
-    setLevel: (lvl: Level) => setState((s) => ({ ...s, level: lvl })),
-    getNextSentence,
-  };
+  // Automatické doplňování bufferu
+  useEffect(() => {
+    if (buffer.length < BUFFER_TARGET) {
+      void refill();
+    }
+  }, [buffer.length, refill]);
+
+  // Při změně levelu reset
+  useEffect(() => {
+    setIds([]);
+    setCursor(0);
+    setBuffer([]);
+  }, [level]);
+
+  const getNextSentence = useCallback(async () => {
+    if (buffer.length === 0) {
+      await refill();
+    }
+    const next = buffer[0] ?? null;
+    if (next) setBuffer((b) => b.slice(1));
+    // po vydání zkusíme znovu doplnit
+    void refill();
+    return next;
+  }, [buffer, refill]);
+
+  return useMemo(
+    () => ({ buffer, prefetching, setLevel, getNextSentence }),
+    [buffer, prefetching, setLevel, getNextSentence]
+  );
 }
