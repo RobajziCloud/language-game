@@ -1,7 +1,7 @@
 "use client";
 
 
-
+// poznámka jestli se znovu rezjede deploy
 
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
