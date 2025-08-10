@@ -463,8 +463,7 @@ let WORDINFO_SEQ = 0;
 function WordInfo({ token }: { token: Token }) {
   const [hover, setHover] = useState(false);
   const [open, setOpen] = useState(false);
-  const myIdRef = useRef<number>(() => ++WORDINFO_SEQ as unknown as number);
-  // container ref pro detekci kliknutí mimo
+  const myIdRef = useRef<number>(++WORDINFO_SEQ);
   const boxRef = useRef<HTMLDivElement | null>(null);
 
   // zavři při kliknutí mimo nebo když se otevře jiný tooltip
@@ -477,7 +476,7 @@ function WordInfo({ token }: { token: Token }) {
     };
     const onSomeoneOpened = (e: Event) => {
       const detail = (e as CustomEvent<number>).detail;
-      if (detail !== (myIdRef.current as unknown as number)) setOpen(false);
+      if (detail !== myIdRef.current) setOpen(false);
     };
     document.addEventListener("click", onDocClick, true);
     window.addEventListener("wordinfo:open", onSomeoneOpened as EventListener);
@@ -490,7 +489,7 @@ function WordInfo({ token }: { token: Token }) {
   // když se otevřu, dám vědět ostatním, ať se zavřou
   useEffect(() => {
     if (open) {
-      window.dispatchEvent(new CustomEvent<number>("wordinfo:open", { detail: myIdRef.current as unknown as number }));
+      window.dispatchEvent(new CustomEvent<number>("wordinfo:open", { detail: myIdRef.current! }));
     }
   }, [open]);
 
@@ -528,7 +527,7 @@ function WordInfo({ token }: { token: Token }) {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
-            className="absolute left-0 top-full mt-2 z-20 p-3 rounded-xl bg-zinc-900/95 ring-1 ring-zinc-700 text-sm"
+            className="absolute left-0 top-full mt-2 z-20 p-3 rounded-2xl bg-zinc-900/95 ring-1 ring-zinc-700 text-sm"
             style={{ width: "250px" }}
           >
             <div className="text-emerald-300 text-xs mb-1">Význam</div>
