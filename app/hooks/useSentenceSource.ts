@@ -1,4 +1,3 @@
-// app/hooks/useSentenceSource.ts
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -20,8 +19,6 @@ type IndexPayload =
   | { items?: string[] }
   | { paths?: string[] };
 
-/* ---------- Helpers ---------- */
-
 function cryptoRandomId() {
   const c = (globalThis as any).crypto;
   if (c && typeof c.getRandomValues === "function") {
@@ -32,12 +29,10 @@ function cryptoRandomId() {
   return Math.random().toString(36).slice(2);
 }
 
-/** Bezpečný parser jedné věty – vrátí validní Sentence nebo null. */
 function parseSentence(raw: any): Sentence | null {
   console.log("[SRC] Raw sentence:", raw);
   if (!raw || typeof raw !== "object") return null;
 
-  // 1) preferovaný tvar: { english: string[] }
   if (Array.isArray(raw.english)) {
     const english = raw.english.filter((x: any) => typeof x === "string");
     if (!english.length) return null;
@@ -52,7 +47,6 @@ function parseSentence(raw: any): Sentence | null {
     };
   }
 
-  // 2) fallbacky: { en: string[] } | { english: "one two" } | { sentence: "..." }
   let english: string[] | null = null;
   if (Array.isArray((raw as any).en)) english = (raw as any).en.filter((x: any) => typeof x === "string");
   if (!english && typeof raw.english === "string") english = raw.english.trim().split(/\s+/);
@@ -73,12 +67,11 @@ function parseSentence(raw: any): Sentence | null {
   return null;
 }
 
-/** Načte index pro daný level – zkusí víc možných umístění. */
 async function fetchIndex(level: Level): Promise<string[]> {
   const candidates = [
-    `/index-${level}.json`,          // public/
-    `/data/index-${level}.json`,     // public/data/
-    `/data/${level}/index.json`,     // public/data/<LEVEL>/index.json
+    `/data/index-${level}.json`,     // tvoje aktuální umístění
+    `/index-${level}.json`,          // fallback
+    `/data/${level}/index.json`,     // fallback
   ];
 
   for (const url of candidates) {
@@ -109,7 +102,6 @@ async function fetchIndex(level: Level): Promise<string[]> {
   return [];
 }
 
-/** Načte větu – zkusí normalizovat relativní cesty. */
 async function fetchSentence(path: string): Promise<Sentence | null> {
   const variants = [
     path,
@@ -138,8 +130,6 @@ async function fetchSentence(path: string): Promise<Sentence | null> {
   return null;
 }
 
-/* ---------- Hook ---------- */
-
 const BUFFER_SIZE = 4;
 
 export function useSentenceSource(initialLevel: Level) {
@@ -153,7 +143,6 @@ export function useSentenceSource(initialLevel: Level) {
   const pickNextPath = useCallback((): string | null => {
     const remaining = indexRef.current.filter((p) => !usedRef.current.has(p));
     if (remaining.length === 0) {
-      // cyklus – začneme znovu
       usedRef.current.clear();
       const all = indexRef.current.slice();
       if (!all.length) return null;
@@ -194,13 +183,10 @@ export function useSentenceSource(initialLevel: Level) {
     }
   }, [level, pickNextPath, buffer.length, prefetching]);
 
-  // Prefill při mountu / změně levelu
   useEffect(() => {
     prefill();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [level]);
+  }, [level, prefill]);
 
-  // Udržuj buffer plný
   useEffect(() => {
     if (buffer.length < Math.max(1, BUFFER_SIZE - 2)) {
       prefill();
