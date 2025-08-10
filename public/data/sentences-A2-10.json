@@ -1,0 +1,42 @@
+[
+  {
+    "id": "A2-10",
+    "level": "A2",
+    "topic": "travel",
+    "english": [
+      "The",
+      "train",
+      "leaves",
+      "at",
+      "seven"
+    ],
+    "tokens": [
+      {
+        "w": "The",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "train",
+        "pos": "noun",
+        "meaning": "rail transport"
+      },
+      {
+        "w": "leaves",
+        "pos": "verb",
+        "meaning": "departs (timetable)"
+      },
+      {
+        "w": "at",
+        "pos": "preposition",
+        "meaning": "time marker"
+      },
+      {
+        "w": "seven",
+        "pos": "number",
+        "meaning": "7 o'clock"
+      }
+    ],
+    "explanation": "Present simple for timetables/schedules."
+  }
+]

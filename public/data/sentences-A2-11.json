@@ -1,0 +1,48 @@
+[
+  {
+    "id": "A2-11",
+    "level": "A2",
+    "topic": "shopping",
+    "english": [
+      "I",
+      "need",
+      "to",
+      "buy",
+      "some",
+      "bread"
+    ],
+    "tokens": [
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "need",
+        "pos": "verb",
+        "meaning": "require"
+      },
+      {
+        "w": "to",
+        "pos": "particle",
+        "meaning": "infinitive marker"
+      },
+      {
+        "w": "buy",
+        "pos": "verb",
+        "meaning": "purchase"
+      },
+      {
+        "w": "some",
+        "pos": "determiner",
+        "meaning": "an unspecified amount"
+      },
+      {
+        "w": "bread",
+        "pos": "noun",
+        "meaning": "food made from flour"
+      }
+    ],
+    "explanation": "Verb + infinitive to express purpose/plan."
+  }
+]

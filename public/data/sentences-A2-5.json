@@ -1,0 +1,42 @@
+[
+  {
+    "id": "A2-5",
+    "level": "A2",
+    "topic": "work",
+    "english": [
+      "They",
+      "have",
+      "a",
+      "meeting",
+      "today"
+    ],
+    "tokens": [
+      {
+        "w": "They",
+        "pos": "pronoun",
+        "meaning": "other people"
+      },
+      {
+        "w": "have",
+        "pos": "verb",
+        "meaning": "possess/hold"
+      },
+      {
+        "w": "a",
+        "pos": "article",
+        "meaning": "indefinite article"
+      },
+      {
+        "w": "meeting",
+        "pos": "noun",
+        "meaning": "work discussion"
+      },
+      {
+        "w": "today",
+        "pos": "adverb",
+        "meaning": "on this day"
+      }
+    ],
+    "explanation": "Simple statement about a scheduled event."
+  }
+]

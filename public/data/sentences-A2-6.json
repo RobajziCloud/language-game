@@ -1,0 +1,42 @@
+[
+  {
+    "id": "A2-6",
+    "level": "A2",
+    "topic": "requests",
+    "english": [
+      "Can",
+      "you",
+      "help",
+      "me",
+      "please"
+    ],
+    "tokens": [
+      {
+        "w": "Can",
+        "pos": "modal",
+        "meaning": "request/ability"
+      },
+      {
+        "w": "you",
+        "pos": "pronoun",
+        "meaning": "the listener"
+      },
+      {
+        "w": "help",
+        "pos": "verb",
+        "meaning": "give assistance"
+      },
+      {
+        "w": "me",
+        "pos": "pronoun",
+        "meaning": "the speaker (object)"
+      },
+      {
+        "w": "please",
+        "pos": "adverb",
+        "meaning": "polite marker"
+      }
+    ],
+    "explanation": "Polite request with 'Can you ... please?'"
+  }
+]

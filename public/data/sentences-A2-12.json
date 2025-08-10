@@ -1,0 +1,36 @@
+[
+  {
+    "id": "A2-12",
+    "level": "A2",
+    "topic": "daily",
+    "english": [
+      "Please",
+      "close",
+      "the",
+      "window"
+    ],
+    "tokens": [
+      {
+        "w": "Please",
+        "pos": "adverb",
+        "meaning": "polite marker"
+      },
+      {
+        "w": "close",
+        "pos": "verb",
+        "meaning": "shut"
+      },
+      {
+        "w": "the",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "window",
+        "pos": "noun",
+        "meaning": "opening in a wall"
+      }
+    ],
+    "explanation": "Polite imperative for simple requests."
+  }
+]

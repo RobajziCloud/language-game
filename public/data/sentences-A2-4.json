@@ -1,0 +1,48 @@
+[
+  {
+    "id": "A2-4",
+    "level": "A2",
+    "topic": "commute",
+    "english": [
+      "He",
+      "goes",
+      "to",
+      "work",
+      "by",
+      "bike"
+    ],
+    "tokens": [
+      {
+        "w": "He",
+        "pos": "pronoun",
+        "meaning": "a man"
+      },
+      {
+        "w": "goes",
+        "pos": "verb",
+        "meaning": "travels (present simple)"
+      },
+      {
+        "w": "to",
+        "pos": "preposition",
+        "meaning": "direction"
+      },
+      {
+        "w": "work",
+        "pos": "noun",
+        "meaning": "place of employment"
+      },
+      {
+        "w": "by",
+        "pos": "preposition",
+        "meaning": "means of transport"
+      },
+      {
+        "w": "bike",
+        "pos": "noun",
+        "meaning": "bicycle"
+      }
+    ],
+    "explanation": "Present simple for routines and habits."
+  }
+]

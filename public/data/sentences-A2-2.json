@@ -1,0 +1,42 @@
+[
+  {
+    "id": "A2-2",
+    "level": "A2",
+    "topic": "daily",
+    "english": [
+      "She",
+      "is",
+      "making",
+      "dinner",
+      "now"
+    ],
+    "tokens": [
+      {
+        "w": "She",
+        "pos": "pronoun",
+        "meaning": "a woman"
+      },
+      {
+        "w": "is",
+        "pos": "verb",
+        "meaning": "be (3rd sg)"
+      },
+      {
+        "w": "making",
+        "pos": "verb",
+        "meaning": "preparing"
+      },
+      {
+        "w": "dinner",
+        "pos": "noun",
+        "meaning": "evening meal"
+      },
+      {
+        "w": "now",
+        "pos": "adverb",
+        "meaning": "at the present time"
+      }
+    ],
+    "explanation": "Present continuous for actions happening now."
+  }
+]

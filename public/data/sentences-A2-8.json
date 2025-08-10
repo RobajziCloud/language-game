@@ -1,0 +1,48 @@
+[
+  {
+    "id": "A2-8",
+    "level": "A2",
+    "topic": "places",
+    "english": [
+      "There",
+      "is",
+      "a",
+      "bank",
+      "near",
+      "here"
+    ],
+    "tokens": [
+      {
+        "w": "There",
+        "pos": "pronoun",
+        "meaning": "existential dummy"
+      },
+      {
+        "w": "is",
+        "pos": "verb",
+        "meaning": "be (singular)"
+      },
+      {
+        "w": "a",
+        "pos": "article",
+        "meaning": "indefinite article"
+      },
+      {
+        "w": "bank",
+        "pos": "noun",
+        "meaning": "financial institution"
+      },
+      {
+        "w": "near",
+        "pos": "preposition",
+        "meaning": "at a short distance from"
+      },
+      {
+        "w": "here",
+        "pos": "adverb",
+        "meaning": "in this place"
+      }
+    ],
+    "explanation": "Existential 'there is' to say something exists in a place."
+  }
+]

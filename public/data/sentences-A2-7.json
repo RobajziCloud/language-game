@@ -1,0 +1,54 @@
+[
+  {
+    "id": "A2-7",
+    "level": "A2",
+    "topic": "food",
+    "english": [
+      "I",
+      "would",
+      "like",
+      "a",
+      "cup",
+      "of",
+      "tea"
+    ],
+    "tokens": [
+      {
+        "w": "I",
+        "pos": "pronoun",
+        "meaning": "the speaker"
+      },
+      {
+        "w": "would",
+        "pos": "modal",
+        "meaning": "polite preference"
+      },
+      {
+        "w": "like",
+        "pos": "verb",
+        "meaning": "want"
+      },
+      {
+        "w": "a",
+        "pos": "article",
+        "meaning": "indefinite article"
+      },
+      {
+        "w": "cup",
+        "pos": "noun",
+        "meaning": "drinking vessel"
+      },
+      {
+        "w": "of",
+        "pos": "preposition",
+        "meaning": "partitive"
+      },
+      {
+        "w": "tea",
+        "pos": "noun",
+        "meaning": "hot drink"
+      }
+    ],
+    "explanation": "Polite ordering with 'would like'."
+  }
+]

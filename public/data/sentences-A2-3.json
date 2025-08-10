@@ -1,0 +1,48 @@
+[
+  {
+    "id": "A2-3",
+    "level": "A2",
+    "topic": "daily",
+    "english": [
+      "We",
+      "are",
+      "waiting",
+      "for",
+      "the",
+      "bus"
+    ],
+    "tokens": [
+      {
+        "w": "We",
+        "pos": "pronoun",
+        "meaning": "the speaker and others"
+      },
+      {
+        "w": "are",
+        "pos": "verb",
+        "meaning": "be (plural)"
+      },
+      {
+        "w": "waiting",
+        "pos": "verb",
+        "meaning": "staying until something happens"
+      },
+      {
+        "w": "for",
+        "pos": "preposition",
+        "meaning": "in expectation of"
+      },
+      {
+        "w": "the",
+        "pos": "article",
+        "meaning": "definite article"
+      },
+      {
+        "w": "bus",
+        "pos": "noun",
+        "meaning": "public transport vehicle"
+      }
+    ],
+    "explanation": "Present continuous used for a temporary situation."
+  }
+]

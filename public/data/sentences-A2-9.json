@@ -1,0 +1,42 @@
+[
+  {
+    "id": "A2-9",
+    "level": "A2",
+    "topic": "devices",
+    "english": [
+      "My",
+      "phone",
+      "battery",
+      "is",
+      "low"
+    ],
+    "tokens": [
+      {
+        "w": "My",
+        "pos": "pronoun",
+        "meaning": "belonging to me"
+      },
+      {
+        "w": "phone",
+        "pos": "noun",
+        "meaning": "mobile device"
+      },
+      {
+        "w": "battery",
+        "pos": "noun",
+        "meaning": "power storage"
+      },
+      {
+        "w": "is",
+        "pos": "verb",
+        "meaning": "be (singular)"
+      },
+      {
+        "w": "low",
+        "pos": "adjective",
+        "meaning": "almost empty"
+      }
+    ],
+    "explanation": "Simple present to describe a current state."
+  }
+]
