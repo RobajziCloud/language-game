@@ -16,32 +16,30 @@ export type Sentence = {
 type IndexPayload =
   | string[]
   | { files?: string[] }
+  | { list?: string[] }
   | { items?: string[] }
-  | { paths?: string[] };
+  | { data?: string[] };
 
-/* ---------- Helpers ---------- */
-
-function cryptoRandomId() {
-  const c = (globalThis as any).crypto;
-  if (c && typeof c.getRandomValues === "function") {
-    const buf = new Uint32Array(2);
-    c.getRandomValues(buf);
-    return `${buf[0].toString(36)}${buf[1].toString(36)}`;
-  }
-  return Math.random().toString(36).slice(2);
+function ensureArray(v: unknown): string[] | null {
+  if (Array.isArray(v) && v.every((x) => typeof x === "string")) return v as string[];
+  return null;
 }
 
-/** Bezpečný parser jedné věty – vrátí validní Sentence nebo null. */
+/** Bezpečný parser jedné věty – akceptuje několik formátů */
 function parseSentence(raw: any): Sentence | null {
-  console.log("[SRC] Raw sentence:", raw);
   if (!raw || typeof raw !== "object") return null;
 
-  // 1) preferovaný tvar: { english: string[] }
-  if (Array.isArray(raw.english)) {
-    const english = raw.english.filter((x: any) => typeof x === "string");
-    if (!english.length) return null;
+  // 1) „ideální“ struktura
+  if (
+    (Array.isArray(raw.english) && raw.english.length) ||
+    (typeof raw.english === "string" && raw.english.trim())
+  ) {
+    const english = Array.isArray(raw.english)
+      ? raw.english.filter((w: any) => typeof w === "string")
+      : raw.english.trim().split(/\s+/);
+
     return {
-      id: String(raw.id ?? cryptoRandomId()),
+      id: typeof raw.id === "string" ? raw.id : (raw.id?.toString?.() ?? crypto.randomUUID()),
       english,
       tokens:
         Array.isArray(raw.tokens) && raw.tokens.length
@@ -55,104 +53,72 @@ function parseSentence(raw: any): Sentence | null {
   let english: string[] | null = null;
   if (Array.isArray((raw as any).en)) english = (raw as any).en.filter((x: any) => typeof x === "string");
   if (!english && typeof raw.english === "string") english = raw.english.trim().split(/\s+/);
-  if (!english && typeof (raw as any).sentence === "string") english = (raw as any).sentence.trim().split(/\s+/);
+  if (!english && typeof (raw as any).sentence === "string")
+    english = (raw as any).sentence.trim().split(/\s+/);
 
-  if (english && english.length) {
-    return {
-      id: String(raw.id ?? cryptoRandomId()),
-      english,
-      tokens:
-        Array.isArray(raw.tokens) && raw.tokens.length
-          ? (raw.tokens as Token[])
-          : english.map((w: string) => ({ w, pos: "", meaning: "" })),
-      explanation: typeof raw.explanation === "string" ? raw.explanation : "",
-    };
-  }
+  if (!english || !english.length) return null;
 
-  return null;
+  return {
+    id: typeof raw.id === "string" ? raw.id : crypto.randomUUID(),
+    english,
+    tokens: english.map((w) => ({ w, pos: "", meaning: "" })),
+    explanation: typeof raw.explanation === "string" ? raw.explanation : "",
+  };
 }
 
-/** Načte index pro daný level – preferuje /data/index-<LEVEL>.json (jak máš v deployi). */
-async function fetchIndex(level: Level): Promise<string[]> {
-  const candidates = [
-    `/data/index-${level}.json`,     // tvoje umístění
-    `/index-${level}.json`,          // fallback
-    `/data/${level}/index.json`,     // fallback
-  ];
+/** Z jedné položky z indexu vyrobí sadu kandidátních URL pro fetch. */
+function buildCandidatesFromIndexEntry(entry: string, level: Level): string[] {
+  const candidates: string[] = [];
+  const push = (u: string) => !candidates.includes(u) && candidates.push(u);
 
-  for (const url of candidates) {
-    try {
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) {
-        console.warn(`[SRC] Nelze načíst index ${url}:`, res.status, res.statusText);
-        continue;
-      }
-      const data: IndexPayload = await res.json();
-      console.log(`[SRC] Index OK ${url}:`, data);
+  const e = entry.trim();
 
-      if (Array.isArray(data)) return data;
-      if (data && typeof data === "object") {
-        const files =
-          (Array.isArray((data as any).files) && (data as any).files) ||
-          (Array.isArray((data as any).items) && (data as any).items) ||
-          (Array.isArray((data as any).paths) && (data as any).paths) ||
-          [];
-        if (files.length) return files;
-      }
-    } catch (e) {
-      console.warn(`[SRC] Chyba při čtení indexu ${url}:`, e);
-    }
+  // Absolutní / relativní cesta s .json → použij přímo
+  if (/^https?:\/\//i.test(e) && e.endsWith(".json")) {
+    push(e);
+    return candidates;
+  }
+  if (e.startsWith("/data/") && e.endsWith(".json")) {
+    push(e);
+    return candidates;
   }
 
-  console.error(`[SRC] Nepodařilo se najít žádný index pro level ${level}.`);
-  return [];
+  // Bez /data/, ale už obsahuje „sentences-“ → doplň správnou cestu
+  if (e.startsWith("sentences-")) {
+    const base = e.endsWith(".json") ? e : `${e}.json`;
+    push(`/data/${base}`); // /data/sentences-A2-1.json
+  }
+
+  // „A2-1“ → zkus preferenčně sentences- prefix, pak další tvary
+  if (/^[A-Za-z]\d-\d+$/.test(e)) {
+    push(`/data/sentences-${e}.json`); // /data/sentences-A2-1.json
+    push(`/data/${e}.json`);           // /data/A2-1.json
+    const [, num] = e.split("-");
+    if (num) push(`/data/${level}/${num}.json`); // /data/A2/1.json
+  }
+
+  // čisté číslo „1“ → odvozujeme z levelu
+  if (/^\d+$/.test(e)) {
+    push(`/data/sentences-${level}-${e}.json`); // /data/sentences-A2-1.json
+    push(`/data/${level}/${e}.json`);           // /data/A2/1.json
+  }
+
+  // „sentences-A2-1.json“ (bez /data/)
+  if (e.endsWith(".json") && !e.startsWith("/")) {
+    push(`/data/${e}`);
+  }
+
+  // kompletní nouzový fallback
+  if (candidates.length === 0) {
+    push(`/data/${e}`); // když už v indexu posíláš „A2/1.json“, tohle ho zachytí
+  }
+
+  return candidates;
 }
 
-/** Načte větu – zkusí více variant cesty podle tvaru položky v indexu. */
-async function fetchSentence(path: string, level: Level): Promise<Sentence | null> {
-  const p = String(path).trim();
-
-  // Sestavíme kandidáty chytře (Set = žádné duplicity)
-  const candidates = new Set<string>();
-
-  const push = (u: string) => candidates.add(u.replace(/\/{2,}/g, "/"));
-
-  // 1) přesně jak je v indexu (s/bez /, s/bez .json)
-  push(p);
-  if (!p.startsWith("/")) push(`/${p}`);
-  if (!p.endsWith(".json")) {
-    push(`${p}.json`);
-    if (!p.startsWith("/")) push(`/${p}.json`);
-  }
-
-  // 2) pod /data
-  const underData = p.startsWith("data/") || p.startsWith("/data/");
-  if (!underData) {
-    push(`/data/${p}`);
-    if (!p.endsWith(".json")) push(`/data/${p}.json`);
-  }
-
-  // 3) pod /data/<level>/ – běžný tvar když index vrátí jen číslo nebo „A2-8“
-  const bare = p.replace(/^\/+/, "").replace(/^data\//, "");
-  push(`/data/${level}/${bare}`);
-  if (!bare.endsWith(".json")) push(`/data/${level}/${bare}.json`);
-
-  // 4) speciály:
-  //    - jen číslo: "8" => /data/<level>/8.json
-  if (/^\d+$/.test(bare)) {
-    push(`/data/${level}/${bare}.json`);
-  }
-  //    - tvar "A2-8": zkusíme i /data/A2-8.json a /data/A2/8.json
-  if (/^[A-Za-z]\d-\d+$/.test(bare)) {
-    push(`/data/${bare}.json`);                // /data/A2-8.json
-    const [, num] = bare.split("-");
-    if (num) push(`/data/${level}/${num}.json`); // /data/A2/8.json
-  }
-
-  // 5) ještě úplný fallback: když je to už s /data/... ale bez .json
-  if (bare.startsWith(`${level}/`) && !bare.endsWith(".json")) {
-    push(`/data/${bare}.json`);
-  }
+/** Robustní načtení jedné věty s více fallbacky cest */
+async function fetchOneSentence(entry: string, level: Level): Promise<Sentence | null> {
+  const candidates = buildCandidatesFromIndexEntry(entry, level);
 
   for (const url of candidates) {
     try {
@@ -175,88 +141,116 @@ async function fetchSentence(path: string, level: Level): Promise<Sentence | nul
   return null;
 }
 
-/* ---------- Hook ---------- */
+/** Načtení indexu pro daný level s podporou různých struktur */
+async function fetchIndex(level: Level): Promise<string[]> {
+  const urls = [
+    `/data/index-${level}.json`,
+    `/data/${level}/index.json`,
+    `/data/${level}/_index.json`,
+  ];
 
-const BUFFER_SIZE = 4;
-
-export function useSentenceSource(initialLevel: Level) {
-  const [level, setLevelState] = useState<Level>(initialLevel);
-  const [prefetching, setPrefetching] = useState(false);
-  const [buffer, setBuffer] = useState<Sentence[]>([]);
-  const indexRef = useRef<string[]>([]);
-  const usedRef = useRef<Set<string>>(new Set());
-  const abortRef = useRef<AbortController | null>(null);
-
-  const pickNextPath = useCallback((): string | null => {
-    const remaining = indexRef.current.filter((p) => !usedRef.current.has(p));
-    if (remaining.length === 0) {
-      usedRef.current.clear();
-      const all = indexRef.current.slice();
-      if (!all.length) return null;
-      return all[Math.floor(Math.random() * all.length)];
-    }
-    return remaining[Math.floor(Math.random() * remaining.length)];
-  }, []);
-
-  const prefill = useCallback(async () => {
-    if (prefetching) return;
-    setPrefetching(true);
-
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-
+  for (const url of urls) {
     try {
-      if (!indexRef.current.length) {
-        indexRef.current = await fetchIndex(level);
-        usedRef.current.clear();
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        console.warn("[SRC] Index nejde načíst:", url, res.status);
+        continue;
+      }
+      const json: IndexPayload = await res.json();
+
+      let list: string[] | null = null;
+      if (Array.isArray(json)) list = ensureArray(json);
+      if (!list && typeof json === "object" && json) {
+        list =
+          ensureArray((json as any).files) ??
+          ensureArray((json as any).list) ??
+          ensureArray((json as any).items) ??
+          ensureArray((json as any).data) ??
+          null;
       }
 
-      const next: Sentence[] = [];
-      while (!ac.signal.aborted && next.length + buffer.length < BUFFER_SIZE) {
-        const path = pickNextPath();
-        if (!path) break;
-        usedRef.current.add(path);
-        const s = await fetchSentence(path, level); // ← předáváme level
-        if (ac.signal.aborted) break;
-        if (s) next.push(s);
+      if (list && list.length) {
+        return list;
       }
-
-      if (!ac.signal.aborted && next.length) {
-        setBuffer((b) => [...b, ...next]);
-      }
-    } finally {
-      if (!ac.signal.aborted) setPrefetching(false);
+      console.warn("[SRC] Index má nečekaný formát:", url, json);
+    } catch (e) {
+      console.warn("[SRC] Chyba při načítání indexu:", e);
     }
-  }, [level, pickNextPath, buffer.length, prefetching]);
+  }
+  return [];
+}
 
-  // Prefill při mountu / změně levelu
+export function useSentenceSource(initialLevel: Level = "A2") {
+  const [level, setLevelState] = useState<Level>(initialLevel);
+  const [buffer, setBuffer] = useState<Sentence[]>([]);
+  const [prefetching, setPrefetching] = useState(false);
+  const indexRef = useRef<string[]>([]);
+  const cursorRef = useRef<number>(0);
+
+  // Při změně levelu natáhni index a přednačti pár vět dopředu
   useEffect(() => {
-    prefill();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let isActive = true;
+
+    async function load() {
+      setPrefetching(true);
+      try {
+        const index = await fetchIndex(level);
+
+        // Když index obsahuje třeba "sentences-A2-1.json", necháme to tak;
+        // Když obsahuje jen "A2-1" nebo "1", postará se o to fetchOneSentence.
+        indexRef.current = index;
+        cursorRef.current = 0;
+
+        // přednačti prvních pár vět (třeba 3)
+        const toPrefetch = index.slice(0, 3);
+        const next: Sentence[] = [];
+        for (const entry of toPrefetch) {
+          const s = await fetchOneSentence(entry, level);
+          if (s) next.push(s);
+        }
+        if (isActive && next.length) {
+          setBuffer(next);
+        }
+      } finally {
+        if (isActive) setPrefetching(false);
+      }
+    }
+
+    load();
+    return () => {
+      isActive = false;
+    };
   }, [level]);
 
-  // Udržuj buffer plný
-  useEffect(() => {
-    if (buffer.length < Math.max(1, BUFFER_SIZE - 2)) {
-      prefill();
+  const getNextSentence = useCallback(async (): Promise<Sentence | null> => {
+    // pokud už máme v bufferu, dej první
+    if (buffer.length) {
+      const [first, ...rest] = buffer;
+      setBuffer(rest);
+      return first;
     }
-  }, [buffer.length, prefill]);
 
-  const getNextSentence = useCallback((): Sentence | null => {
-    if (buffer.length === 0) return null;
-    const [first, ...rest] = buffer;
-    setBuffer(rest);
-    return first ?? null;
+    // jinak dobij jednu další z indexu
+    const index = indexRef.current;
+    const i = cursorRef.current;
+    if (!index || i >= index.length) {
+      console.warn("[SRC] Index prázdný nebo konec seznamu.");
+      return null;
+    }
+
+    const entry = index[i];
+    cursorRef.current = i + 1;
+
+    const s = await fetchOneSentence(entry, level);
+    if (s) return s;
+
+    // když se tahle nepovedla, jdi dál v seznamu
+    return getNextSentence();
   }, [buffer]);
 
   const setLevel = useCallback(
     (l: Level) => {
       if (l === level) return;
-      abortRef.current?.abort();
-      indexRef.current = [];
-      usedRef.current.clear();
-      setBuffer([]);
       setLevelState(l);
     },
     [level]
