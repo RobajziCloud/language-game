@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, Loader2, HelpCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -459,14 +459,51 @@ function DropSlot({
   );
 }
 
+let WORDINFO_SEQ = 0;
 function WordInfo({ token }: { token: Token }) {
   const [hover, setHover] = useState(false);
   const [open, setOpen] = useState(false);
+  const myIdRef = useRef<number>(() => ++WORDINFO_SEQ as unknown as number);
+  // container ref pro detekci kliknutí mimo
+  const boxRef = useRef<HTMLDivElement | null>(null);
+
+  // zavři při kliknutí mimo nebo když se otevře jiný tooltip
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (boxRef.current && !boxRef.current.contains(target)) {
+        setOpen(false);
+      }
+    };
+    const onSomeoneOpened = (e: Event) => {
+      const detail = (e as CustomEvent<number>).detail;
+      if (detail !== (myIdRef.current as unknown as number)) setOpen(false);
+    };
+    document.addEventListener("click", onDocClick, true);
+    window.addEventListener("wordinfo:open", onSomeoneOpened as EventListener);
+    return () => {
+      document.removeEventListener("click", onDocClick, true);
+      window.removeEventListener("wordinfo:open", onSomeoneOpened as EventListener);
+    };
+  }, []);
+
+  // když se otevřu, dám vědět ostatním, ať se zavřou
+  useEffect(() => {
+    if (open) {
+      window.dispatchEvent(new CustomEvent<number>("wordinfo:open", { detail: myIdRef.current as unknown as number }));
+    }
+  }, [open]);
+
   return (
-    <div className="relative" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div
+      ref={boxRef}
+      className="relative"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
       <button
         className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 ring-1 ring-white/15 text-sm text-zinc-100 shadow"
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((v) => !v)}
       >
         {token.w}
         <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-zinc-300 ring-1 ring-white/10">
@@ -491,7 +528,7 @@ function WordInfo({ token }: { token: Token }) {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
-            className="absolute left-0 top-full mt-2 z-20 p-3 rounded-xl bg-white/10 backdrop-blur-xl ring-1 ring-white/10 text-sm"
+            className="absolute left-0 top-full mt-2 z-20 p-3 rounded-xl bg-zinc-900/95 ring-1 ring-zinc-700 text-sm"
             style={{ width: "250px" }}
           >
             <div className="text-emerald-300 text-xs mb-1">Význam</div>
