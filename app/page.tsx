@@ -59,6 +59,26 @@ export default function Page() {
   const [showExplain, setShowExplain] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
 
+  // ⟳ LOOP fallback: vyber další větu z bufferu cirkulárně
+  const pickNextFromBuffer = (currentId?: string | null): Sentence | null => {
+    const arr = Array.isArray(buffer) ? buffer : [];
+    if (!arr.length) return null;
+    if (!currentId) return arr[0];
+    const idx = arr.findIndex((s) => s.id === currentId);
+    const nextIdx = idx >= 0 ? (idx + 1) % arr.length : 0;
+    return arr[nextIdx] ?? null;
+  };
+
+  const sentenceToPack = (s: Sentence): Pack => ({
+    id: s.id ?? String(Date.now()),
+    english: s.english,
+    tokens:
+      Array.isArray(s.tokens) && s.tokens.length
+        ? s.tokens
+        : s.english.map((w) => ({ w, pos: "", meaning: "" })),
+    explanation: s.explanation ?? "",
+  });
+
   // Robust polling na další větu
   const waitForNextSentence = async (timeoutMs = 7000, intervalMs = 150) => {
     const deadline = Date.now() + timeoutMs;
@@ -91,36 +111,39 @@ export default function Page() {
     setRound(1);
   }, [level, applyLevel]);
 
-  // Inicializace první věty s pollingem
+  // Inicializace první věty s pollingem + ⟳ LOOP fallback
   useEffect(() => {
     let cancelled = false;
     const init = async () => {
       if (pack) return;
-      const s = await waitForNextSentence(7000, 150);
+      let s = await waitForNextSentence(7000, 150);
+      if (!s) {
+        // ⟳ LOOP fallback: když nepřijde věta, naber první z bufferu
+        s = pickNextFromBuffer(null);
+      }
       if (cancelled) return;
       if (s) {
-        const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
-        setPack(p);
+        setPack(sentenceToPack(s));
       } else {
-        console.warn("Nepodařilo se načíst první větu do 7s");
+        console.warn("Nepodařilo se načíst první větu (ani z bufferu).");
       }
     };
     init();
     return () => {
       cancelled = true;
     };
-  }, [pack, level, getNextSentence]);
+  }, [pack, level, getNextSentence, buffer]);
 
   // ✅ Klíčový reset při změně věty (řeší uvízlé "I" v poolu)
   useEffect(() => {
     if (!pack) return;
     // plný reset podle nové věty
-  const newSlots = pack.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null }));
-  setSlots(newSlots);
-  setPool(shuffle(pack.english));
-  setVerdict(Array(pack.english.length).fill(null));
-  setShowExplain(false);
-}, [pack?.id, round]);
+    const newSlots = pack.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null }));
+    setSlots(newSlots);
+    setPool(shuffle(pack.english));
+    setVerdict(Array(pack.english.length).fill(null));
+    setShowExplain(false);
+  }, [pack?.id, round]);
 
   const onDragStart = (word: string) => (e: React.DragEvent) => {
     e.dataTransfer.setData("text/plain", word);
@@ -186,27 +209,23 @@ export default function Page() {
     setSlots([]);
     setPool([]);
 
-    const s = await waitForNextSentence(7000, 150);
+    // Nejprve zkusit zdroj (prefetch/fronta), pokud nic – ⟳ LOOP fallback z bufferu
+    let s = await waitForNextSentence(7000, 150);
     if (!s) {
+      s = pickNextFromBuffer(pack?.id ?? null);
+    }
+
+    if (!s) {
+      console.warn("Nepodařilo se načíst další větu (ani z bufferu).");
       setTransitioning(false);
       return;
     }
 
-    if (s && Array.isArray(s.english) && s.english.length > 0) {
-      const p: Pack = {
-        id: s.id ?? String(Date.now()),
-        english: s.english,
-        tokens: Array.isArray(s.tokens) && s.tokens.length
-          ? s.tokens
-          : s.english.map((w) => ({ w, pos: "", meaning: "" })),
-        explanation: s.explanation ?? "",
-      };
-      setPack(p); // reset pool/slots se teď udělá automaticky v useEffectu na pack.id
+    if (Array.isArray(s.english) && s.english.length > 0) {
+      setPack(sentenceToPack(s)); // reset pool/slots se provede v useEffectu na pack.id
       setRound((r) => r + 1);
-    } else if (s) {
-      console.error("⚠️ Další věta neobsahuje validní english pole:", s);
     } else {
-      console.warn("Nepodařilo se načíst další větu do 7s");
+      console.error("⚠️ Další věta neobsahuje validní english pole:", s);
     }
 
     setTimeout(() => setTransitioning(false), 0);
