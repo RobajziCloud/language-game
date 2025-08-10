@@ -1,12 +1,15 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X } from "lucide-react";
-import { useSentenceSource } from "@/app/hooks/useSentenceSource";
+import { Check, X, Loader2, HelpCircle, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSentenceSource, LEVELS, type Sentence } from "@/app/hooks/useSentenceSource";
 
 type Verdict = "correct" | "wrong" | null;
 type Token = { w: string; pos: string; meaning: string };
 type Pack = { id: string; english: string[]; tokens: Token[]; explanation: string };
+
 type Slot = { id: string; token: string | null };
 
 function shuffle<T>(arr: T[]) {
@@ -44,10 +47,10 @@ function Chip(state: Verdict) {
 
 export default function Page() {
   const [loading, setLoading] = useState(true);
-  const [booting, setBooting] = useState(true);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [round, setRound] = useState(1);
   const [stats, setStats] = useState({ rounds: 0, correctTokens: 0, totalTokens: 0 });
-  const [level] = useState<"A2" | "B1" | "B2">("A2");
+  const [level, setLevel] = useState<"A2" | "B1" | "B2">("A2");
   const { buffer, prefetching, setLevel: applyLevel, getNextSentence } = useSentenceSource(level);
   const [pack, setPack] = useState<Pack | null>(null);
   const [pool, setPool] = useState<string[]>([]);
@@ -56,24 +59,24 @@ export default function Page() {
   const [showExplain, setShowExplain] = useState(false);
 
   useEffect(() => {
-    let alive = true;
-    async function boot() {
-      applyLevel("A2");
-      setShowExplain(false);
-      setPack(null);
-      setSlots([]);
-      setPool([]);
-      setVerdict([]);
+    const id = setInterval(() => setLoadingStep((s) => (s + 1) % 4), 700);
+    const t = setTimeout(() => setLoading(false), 2600);
+    return () => {
+      clearInterval(id);
+      clearTimeout(t);
+    };
+  }, []);
 
-      // počkáme až se buffer naplní nebo timeout
-      const start = Date.now();
-      while (alive && buffer.length === 0 && Date.now() - start < 8000) {
-        await new Promise((r) => setTimeout(r, 100));
-      }
+  useEffect(() => {
+    applyLevel(level);
+  }, [level, applyLevel]);
 
-      if (alive && buffer.length > 0) {
+  // initialize first sentence when buffer fills
+  useEffect(() => {
+    const init = async () => {
+      if (!pack && buffer.length > 0) {
         const s = await getNextSentence();
-        if (alive && s) {
+        if (s) {
           const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
           setPack(p);
           setSlots(p.english.map((_, i) => ({ id: `s-0-${i}`, token: null })));
@@ -81,22 +84,10 @@ export default function Page() {
           setVerdict(Array(p.english.length).fill(null));
         }
       }
-      if (alive) {
-        setBooting(false);
-        setLoading(false);
-      }
-    }
-    boot();
-    return () => { alive = false; };
-  }, [applyLevel, buffer.length, getNextSentence]);
+    };
+    init();
+  }, [buffer, pack, getNextSentence]);
 
-  if (booting || loading || prefetching) {
-    return <div className="flex items-center justify-center h-screen">Načítám…</div>;
-  }
-
-  // Zbytek renderování hry zůstává beze změny
-  return <div>Hra načtena pro {level}</div>;
-}
   const onDragStart = (word: string) => (e: React.DragEvent) => {
     e.dataTransfer.setData("text/plain", word);
     e.dataTransfer.effectAllowed = "move";
@@ -330,4 +321,3 @@ function WordInfo({ token }: { token: Token }) {
     </div>
   );
 }
-
