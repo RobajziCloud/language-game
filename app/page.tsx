@@ -30,8 +30,8 @@ export default function Page() {
   const [round, setRound] = useState(1);
   const [stats, setStats] = useState({ rounds: 0, correctTokens: 0, totalTokens: 0 });
 
-  // Level: default to A1 on first load
-  const [level, setLevel] = useState<"A1" | "A2" | "B1" | "B2">("A1");
+  // Level: default to A2 on first load
+  const [level, setLevel] = useState<"A2" | "B1" | "B2">("A2");
   const { buffer, prefetching, setLevel: applyLevel, getNextSentence } = useSentenceSource(level);
 
   // Game state
@@ -46,8 +46,8 @@ export default function Page() {
     let alive = true;
     async function boot() {
       // Always start on A1 when the page first mounts
-      applyLevel("A1");
-      setLevel("A1");
+      applyLevel("A2");
+      setLevel("A2");
       setShowExplain(false);
       setPack(null);
       setSlots([]);
