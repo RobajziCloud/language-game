@@ -80,7 +80,7 @@ export default function Page() {
     };
   }, []);
 
-  // Reset při změně levelu
+  // Reset při změně levelu – okamžitě vyprázdni UI
   useEffect(() => {
     applyLevel(level);
     setPack(null);
@@ -101,10 +101,6 @@ export default function Page() {
       if (s) {
         const p: Pack = { id: s.id, english: s.english, tokens: s.tokens, explanation: s.explanation };
         setPack(p);
-        setSlots(p.english.map((_, i) => ({ id: `s-0-${i}`, token: null })));
-        setPool(shuffle(p.english));
-        setVerdict(Array(p.english.length).fill(null));
-        setShowExplain(false);
       } else {
         console.warn("Nepodařilo se načíst první větu do 7s");
       }
@@ -114,6 +110,16 @@ export default function Page() {
       cancelled = true;
     };
   }, [pack, level, getNextSentence]);
+
+  // ✅ Klíčový reset při změně věty (řeší uvízlé "I" v poolu)
+  useEffect(() => {
+    if (!pack) return;
+    // plný reset podle nové věty
+    setSlots(pack.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
+    setPool(shuffle(pack.english));
+    setVerdict(Array(pack.english.length).fill(null));
+    setShowExplain(false);
+  }, [pack?.id]);
 
   const onDragStart = (word: string) => (e: React.DragEvent) => {
     e.dataTransfer.setData("text/plain", word);
@@ -186,24 +192,21 @@ export default function Page() {
     }
 
     if (s && Array.isArray(s.english) && s.english.length > 0) {
-    const p: Pack = {
-    id: s.id ?? String(Date.now()),
-    english: s.english,
-    tokens: Array.isArray(s.tokens) && s.tokens.length
-      ? s.tokens
-      : s.english.map((w) => ({ w, pos: "", meaning: "" })),
-    explanation: s.explanation ?? "",
-    };
-   setPack(p);
-   setSlots(p.english.map((_, i) => ({ id: `s-${round}-${i}`, token: null })));
-   setPool(shuffle(p.english));
-   setVerdict(Array(p.english.length).fill(null));
-   setRound((r) => r + 1);
-   } else if (s) {
-   console.error("⚠️ Další věta neobsahuje validní english pole:", s);
-   } else {
-  console.warn("Nepodařilo se načíst další větu do 7s");
-  }
+      const p: Pack = {
+        id: s.id ?? String(Date.now()),
+        english: s.english,
+        tokens: Array.isArray(s.tokens) && s.tokens.length
+          ? s.tokens
+          : s.english.map((w) => ({ w, pos: "", meaning: "" })),
+        explanation: s.explanation ?? "",
+      };
+      setPack(p); // reset pool/slots se teď udělá automaticky v useEffectu na pack.id
+      setRound((r) => r + 1);
+    } else if (s) {
+      console.error("⚠️ Další věta neobsahuje validní english pole:", s);
+    } else {
+      console.warn("Nepodařilo se načíst další větu do 7s");
+    }
 
     setTimeout(() => setTransitioning(false), 0);
   };
@@ -328,8 +331,8 @@ export default function Page() {
                     onDrop={onDropToPool}
                   >
                     <AnimatePresence>
-                      {pool.map((w) => (
-                        <Word key={w} word={w} draggable onDragStart={onDragStart(w)} />
+                      {pool.map((w, idx) => (
+                        <Word key={`${pack?.id}-${idx}`} word={w} draggable onDragStart={onDragStart(w)} />
                       ))}
                     </AnimatePresence>
                     {pool.length === 0 && (
@@ -373,8 +376,8 @@ export default function Page() {
                     Najetím myši zobrazíš slovní druh, kliknutím význam ze slovníku.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {pack.tokens.map((t) => (
-                      <WordInfo key={t.w} token={t} />
+                    {pack.tokens.map((t, i) => (
+                      <WordInfo key={`${pack.id}-${i}-${t.w}`} token={t} />
                     ))}
                   </div>
                   <motion.div
