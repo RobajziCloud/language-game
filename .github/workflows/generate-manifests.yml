@@ -32,7 +32,7 @@ jobs:
 
       - name: Generate manifests (limit max to 10)
         run: |
-          node scripts/gen-manifests.mjs --max=10
+          node scripts/gen-manifests.mjs
 
       - name: Commit & push changes (if any)
         run: |
