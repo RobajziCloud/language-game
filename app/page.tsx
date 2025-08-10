@@ -9,7 +9,6 @@ import { useSentenceSource, LEVELS, type Sentence } from "@/app/hooks/useSentenc
 type Verdict = "correct" | "wrong" | null;
 type Token = { w: string; pos: string; meaning: string };
 type Pack = { id: string; english: string[]; tokens: Token[]; explanation: string };
-
 type Slot = { id: string; token: string | null };
 
 function shuffle<T>(arr: T[]) {
@@ -50,7 +49,8 @@ export default function Page() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [round, setRound] = useState(1);
   const [stats, setStats] = useState({ rounds: 0, correctTokens: 0, totalTokens: 0 });
-  const [level, setLevel] = useState<"A2" | "B1" | "B2">("A2");
+  // ✅ Nastavíme výchozí obtížnost na A1
+  const [level, setLevel] = useState<"A1" | "A2" | "B1" | "B2">("A1");
   const { buffer, prefetching, setLevel: applyLevel, getNextSentence } = useSentenceSource(level);
   const [pack, setPack] = useState<Pack | null>(null);
   const [pool, setPool] = useState<string[]>([]);
@@ -67,9 +67,8 @@ export default function Page() {
     };
   }, []);
 
+  // ✅ Po prvním načtení rovnou aplikujeme A1 a načteme první větu
   useEffect(() => {
-    // Přepnutí obtížnosti: přepni zdroj dat a resetuj UI,
-    // aby se hned načetla první věta nového levelu.
     applyLevel(level);
     setShowExplain(false);
     setPack(null);
@@ -78,7 +77,6 @@ export default function Page() {
     setVerdict([]);
   }, [level, applyLevel]);
 
-  // initialize first sentence when buffer fills
   useEffect(() => {
     const init = async () => {
       if (!pack && buffer.length > 0) {
